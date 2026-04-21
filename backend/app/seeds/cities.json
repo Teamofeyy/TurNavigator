@@ -1,0 +1,80 @@
+[
+  {
+    "id": 1,
+    "name": "Москва",
+    "region": "Москва",
+    "country": "Россия",
+    "latitude": 55.7558,
+    "longitude": 37.6173,
+    "population": 13000000,
+    "source": "manual_seed",
+    "external_id": "moscow",
+    "wikidata_id": "Q649",
+    "osm_id": null
+  },
+  {
+    "id": 2,
+    "name": "Санкт-Петербург",
+    "region": "Санкт-Петербург",
+    "country": "Россия",
+    "latitude": 59.9343,
+    "longitude": 30.3351,
+    "population": 5600000,
+    "source": "manual_seed",
+    "external_id": "saint-petersburg",
+    "wikidata_id": "Q656",
+    "osm_id": null
+  },
+  {
+    "id": 3,
+    "name": "Казань",
+    "region": "Республика Татарстан",
+    "country": "Россия",
+    "latitude": 55.7961,
+    "longitude": 49.1064,
+    "population": 1300000,
+    "source": "manual_seed",
+    "external_id": "kazan",
+    "wikidata_id": "Q900",
+    "osm_id": null
+  },
+  {
+    "id": 4,
+    "name": "Нижний Новгород",
+    "region": "Нижегородская область",
+    "country": "Россия",
+    "latitude": 56.3269,
+    "longitude": 44.0059,
+    "population": 1200000,
+    "source": "manual_seed",
+    "external_id": "nizhny-novgorod",
+    "wikidata_id": "Q891",
+    "osm_id": null
+  },
+  {
+    "id": 5,
+    "name": "Екатеринбург",
+    "region": "Свердловская область",
+    "country": "Россия",
+    "latitude": 56.8389,
+    "longitude": 60.6057,
+    "population": 1500000,
+    "source": "manual_seed",
+    "external_id": "yekaterinburg",
+    "wikidata_id": "Q887",
+    "osm_id": null
+  },
+  {
+    "id": 6,
+    "name": "Ростов-на-Дону",
+    "region": "Ростовская область",
+    "country": "Россия",
+    "latitude": 47.2357,
+    "longitude": 39.7015,
+    "population": 1143123,
+    "source": "manual_seed",
+    "external_id": "rostov-on-don",
+    "wikidata_id": "Q908",
+    "osm_id": null
+  }
+]
