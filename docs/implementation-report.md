@@ -174,7 +174,14 @@
 
 ### Health
 
-- `GET /health` - проверка работоспособности backend.
+- `GET /health` - проверка работоспособности backend. Endpoint задокументирован в OpenAPI и доступен в Swagger UI.
+
+Автоматически генерируемая документация:
+
+- Swagger UI: `http://127.0.0.1:8000/docs`;
+- ReDoc: `http://127.0.0.1:8000/redoc`;
+- OpenAPI JSON: `http://127.0.0.1:8000/openapi.json`;
+- экспортированная схема: `docs/openapi.json`.
 
 ### Cities
 
