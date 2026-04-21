@@ -53,3 +53,55 @@ Response:
 ```
 
 The endpoint is tagged as `health` in the generated OpenAPI schema.
+
+### `GET /cities`
+
+Returns all cities available in the current MVP seed dataset.
+
+Example:
+
+```bash
+curl http://127.0.0.1:8000/cities
+```
+
+Each city contains `pois_count`, so the frontend can show how many objects are available before opening the city.
+
+### `GET /cities/{city_id}`
+
+Returns one city by internal id.
+
+Example:
+
+```bash
+curl http://127.0.0.1:8000/cities/6
+```
+
+If the city does not exist, the API returns `404`.
+
+### `GET /cities/{city_id}/pois`
+
+Returns points of interest for a city.
+
+Supported query parameters:
+
+- `category` - optional normalized category filter, for example `food` or `history`;
+- `limit` - maximum number of objects to return, from 1 to 100;
+- `offset` - number of objects to skip.
+
+Example:
+
+```bash
+curl "http://127.0.0.1:8000/cities/6/pois?category=food"
+```
+
+### `GET /pois/{poi_id}`
+
+Returns one point of interest by internal id.
+
+Example:
+
+```bash
+curl http://127.0.0.1:8000/pois/6005
+```
+
+If the point of interest does not exist, the API returns `404`.

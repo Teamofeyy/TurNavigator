@@ -3,7 +3,7 @@
   "info": {
     "title": "TravelContext API",
     "summary": "API for the intelligent travel planning DSS prototype.",
-    "description": "TravelContext API powers a prototype decision support system for personalized travel planning. The current API version exposes a health check and will be extended with cities, points of interest, recommendations, route planning, explanations, and feedback.",
+    "description": "TravelContext API powers a prototype decision support system for personalized travel planning. The current API version exposes health checks, cities, and points of interest from seed data. It will be extended with recommendations, route planning, explanations, and feedback.",
     "contact": {
       "name": "TravelContext project"
     },
@@ -43,10 +43,388 @@
           }
         }
       }
+    },
+    "/cities": {
+      "get": {
+        "tags": [
+          "cities"
+        ],
+        "summary": "List available cities",
+        "description": "Returns cities available in the current MVP seed dataset. Each city includes the number of available points of interest.",
+        "operationId": "get_cities_cities_get",
+        "responses": {
+          "200": {
+            "description": "Available cities.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CityResponse"
+                  },
+                  "type": "array",
+                  "title": "Response Get Cities Cities Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/cities/{city_id}": {
+      "get": {
+        "tags": [
+          "cities"
+        ],
+        "summary": "Get city by id",
+        "description": "Returns one city from the current MVP seed dataset.",
+        "operationId": "get_city_by_id_cities__city_id__get",
+        "parameters": [
+          {
+            "name": "city_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "City Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "City details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CityResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "City was not found.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "City not found"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/cities/{city_id}/pois": {
+      "get": {
+        "tags": [
+          "cities"
+        ],
+        "summary": "List city points of interest",
+        "description": "Returns points of interest for a city. Results can be filtered by normalized category and paginated with limit/offset.",
+        "operationId": "get_city_points_of_interest_cities__city_id__pois_get",
+        "parameters": [
+          {
+            "name": "city_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "City Id"
+            }
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional normalized category filter.",
+              "examples": [
+                "history"
+              ],
+              "title": "Category"
+            },
+            "description": "Optional normalized category filter."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "description": "Maximum number of POI records to return.",
+              "default": 50,
+              "title": "Limit"
+            },
+            "description": "Maximum number of POI records to return."
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Number of POI records to skip.",
+              "default": 0,
+              "title": "Offset"
+            },
+            "description": "Number of POI records to skip."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "City points of interest.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PointOfInterestResponse"
+                  },
+                  "title": "Response Get City Points Of Interest Cities  City Id  Pois Get"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "City was not found.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "City not found"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/pois/{poi_id}": {
+      "get": {
+        "tags": [
+          "points-of-interest"
+        ],
+        "summary": "Get point of interest by id",
+        "description": "Returns one point of interest from the current MVP seed dataset.",
+        "operationId": "get_point_of_interest_by_id_pois__poi_id__get",
+        "parameters": [
+          {
+            "name": "poi_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Poi Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Point of interest details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PointOfInterestResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Point of interest was not found.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Point of interest not found"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
+      "CityResponse": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id",
+            "description": "Internal city identifier.",
+            "examples": [
+              3
+            ]
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "City name.",
+            "examples": [
+              "Казань"
+            ]
+          },
+          "region": {
+            "type": "string",
+            "title": "Region",
+            "description": "Russian region name.",
+            "examples": [
+              "Республика Татарстан"
+            ]
+          },
+          "country": {
+            "type": "string",
+            "title": "Country",
+            "description": "Country name.",
+            "examples": [
+              "Россия"
+            ]
+          },
+          "latitude": {
+            "type": "number",
+            "title": "Latitude",
+            "description": "City center latitude.",
+            "examples": [
+              55.7961
+            ]
+          },
+          "longitude": {
+            "type": "number",
+            "title": "Longitude",
+            "description": "City center longitude.",
+            "examples": [
+              49.1064
+            ]
+          },
+          "population": {
+            "type": "integer",
+            "title": "Population",
+            "description": "Approximate city population.",
+            "examples": [
+              1300000
+            ]
+          },
+          "source": {
+            "type": "string",
+            "title": "Source",
+            "description": "Data source identifier.",
+            "examples": [
+              "manual_seed"
+            ]
+          },
+          "external_id": {
+            "type": "string",
+            "title": "External Id",
+            "description": "Stable source-specific city identifier.",
+            "examples": [
+              "kazan"
+            ]
+          },
+          "wikidata_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Wikidata Id",
+            "description": "Linked Wikidata Q-id if available.",
+            "examples": [
+              "Q900"
+            ]
+          },
+          "osm_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Osm Id",
+            "description": "Linked OpenStreetMap object id if available.",
+            "examples": [
+              123456
+            ]
+          },
+          "pois_count": {
+            "type": "integer",
+            "title": "Pois Count",
+            "description": "Number of points of interest currently available for the city.",
+            "examples": [
+              8
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "region",
+          "country",
+          "latitude",
+          "longitude",
+          "population",
+          "source",
+          "external_id",
+          "pois_count"
+        ],
+        "title": "CityResponse"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
       "HealthResponse": {
         "properties": {
           "status": {
@@ -63,6 +441,291 @@
           "status"
         ],
         "title": "HealthResponse"
+      },
+      "PointOfInterestResponse": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id",
+            "description": "Internal point of interest identifier.",
+            "examples": [
+              3001
+            ]
+          },
+          "city_id": {
+            "type": "integer",
+            "title": "City Id",
+            "description": "Internal city identifier.",
+            "examples": [
+              3
+            ]
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Point of interest name.",
+            "examples": [
+              "Казанский кремль"
+            ]
+          },
+          "category": {
+            "type": "string",
+            "title": "Category",
+            "description": "Normalized internal category.",
+            "examples": [
+              "history"
+            ]
+          },
+          "subcategory": {
+            "type": "string",
+            "title": "Subcategory",
+            "description": "More specific internal subcategory.",
+            "examples": [
+              "museum_complex"
+            ]
+          },
+          "latitude": {
+            "type": "number",
+            "title": "Latitude",
+            "description": "POI latitude.",
+            "examples": [
+              55.7996
+            ]
+          },
+          "longitude": {
+            "type": "number",
+            "title": "Longitude",
+            "description": "POI longitude.",
+            "examples": [
+              49.1055
+            ]
+          },
+          "address": {
+            "type": "string",
+            "title": "Address",
+            "description": "Human-readable address.",
+            "examples": [
+              "Кремль"
+            ]
+          },
+          "description": {
+            "type": "string",
+            "title": "Description",
+            "description": "Short POI description."
+          },
+          "opening_hours": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Opening Hours",
+            "description": "Opening hours in source format if available.",
+            "examples": [
+              "10:00-18:00"
+            ]
+          },
+          "website": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Website",
+            "description": "Official or reference website if available.",
+            "examples": [
+              "https://kazan-kremlin.ru"
+            ]
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone",
+            "description": "Contact phone if available.",
+            "examples": [
+              "+7 (843) 292-70-70"
+            ]
+          },
+          "source": {
+            "type": "string",
+            "title": "Source",
+            "description": "Data source identifier.",
+            "examples": [
+              "manual_seed"
+            ]
+          },
+          "external_id": {
+            "type": "string",
+            "title": "External Id",
+            "description": "Stable source-specific POI identifier.",
+            "examples": [
+              "kazan-kremlin"
+            ]
+          },
+          "wikidata_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Wikidata Id",
+            "description": "Linked Wikidata Q-id if available.",
+            "examples": [
+              "Q171223"
+            ]
+          },
+          "osm_tags": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Osm Tags",
+            "description": "Source-like OSM tags used for category mapping.",
+            "examples": [
+              {
+                "tourism": "museum"
+              }
+            ]
+          },
+          "estimated_price_level": {
+            "type": "string",
+            "title": "Estimated Price Level",
+            "description": "Estimated price level for planning constraints.",
+            "examples": [
+              "medium"
+            ]
+          },
+          "average_cost_rub": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Average Cost Rub",
+            "description": "Approximate expected cost in Russian rubles.",
+            "examples": [
+              1200
+            ]
+          },
+          "estimated_visit_minutes": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Estimated Visit Minutes",
+            "description": "Approximate visit duration in minutes.",
+            "examples": [
+              90
+            ]
+          },
+          "popularity_score": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Popularity Score",
+            "description": "Normalized popularity estimate from 0 to 1.",
+            "examples": [
+              0.92
+            ]
+          },
+          "data_quality_score": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Data Quality Score",
+            "description": "Normalized confidence/data quality estimate from 0 to 1.",
+            "examples": [
+              0.86
+            ]
+          },
+          "interests": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Interests",
+            "description": "Interest tags used by the recommendation engine.",
+            "examples": [
+              [
+                "history",
+                "architecture",
+                "culture"
+              ]
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "city_id",
+          "name",
+          "category",
+          "subcategory",
+          "latitude",
+          "longitude",
+          "address",
+          "description",
+          "source",
+          "external_id",
+          "osm_tags",
+          "estimated_price_level",
+          "average_cost_rub",
+          "estimated_visit_minutes",
+          "popularity_score",
+          "data_quality_score",
+          "interests"
+        ],
+        "title": "PointOfInterestResponse"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
       }
     }
   },
@@ -70,6 +733,14 @@
     {
       "name": "health",
       "description": "Service health and availability checks."
+    },
+    {
+      "name": "cities",
+      "description": "Cities available for travel planning in the MVP dataset."
+    },
+    {
+      "name": "points-of-interest",
+      "description": "Tourism, food, accommodation, shopping, and entertainment objects."
     }
   ]
 }

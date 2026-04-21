@@ -45,3 +45,13 @@ Export the generated OpenAPI schema to `docs/openapi.json`:
 ```bash
 UV_CACHE_DIR=../.uv-cache uv run python -m app.tools.export_openapi
 ```
+
+## Current API
+
+```bash
+curl http://127.0.0.1:8000/health
+curl http://127.0.0.1:8000/cities
+curl http://127.0.0.1:8000/cities/6
+curl "http://127.0.0.1:8000/cities/6/pois?category=food"
+curl http://127.0.0.1:8000/pois/6005
+```

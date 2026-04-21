@@ -185,15 +185,15 @@
 
 ### Cities
 
-- `GET /cities` - список доступных городов;
-- `GET /cities/{city_id}` - информация о городе;
+- `GET /cities` - список доступных городов, реализовано на seed-данных;
+- `GET /cities/{city_id}` - информация о городе, реализовано на seed-данных;
 - `POST /cities/import` - импорт стартового набора городов.
 
 ### Points of Interest
 
-- `GET /cities/{city_id}/pois` - список POI по городу;
+- `GET /cities/{city_id}/pois` - список POI по городу, реализовано на seed-данных;
 - `POST /cities/{city_id}/pois/import` - загрузка POI из внешних источников;
-- `GET /pois/{poi_id}` - карточка конкретного объекта.
+- `GET /pois/{poi_id}` - карточка конкретного объекта, реализовано на seed-данных.
 
 ### Profile
 

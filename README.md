@@ -48,3 +48,13 @@ OpenAPI JSON:
 ```text
 http://127.0.0.1:8000/openapi.json
 ```
+
+Текущие API endpoint'ы:
+
+```text
+GET /health
+GET /cities
+GET /cities/{city_id}
+GET /cities/{city_id}/pois
+GET /pois/{poi_id}
+```
