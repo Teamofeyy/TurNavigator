@@ -57,4 +57,6 @@ GET /cities
 GET /cities/{city_id}
 GET /cities/{city_id}/pois
 GET /pois/{poi_id}
+POST /trip-requests
+POST /recommendations/generate
 ```
