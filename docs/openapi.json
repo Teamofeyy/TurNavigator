@@ -3,7 +3,7 @@
   "info": {
     "title": "TravelContext API",
     "summary": "API for the intelligent travel planning DSS prototype.",
-    "description": "TravelContext API powers a prototype decision support system for personalized travel planning. The current API version exposes health checks, cities, points of interest, trip requests, and personalized recommendations from seed data. It will be extended with route planning, feedback, and persistent storage.",
+    "description": "TravelContext API powers a prototype decision support system for personalized travel planning. The current API version exposes health checks, cities, points of interest, trip requests, and personalized recommendations from seed data. It will be extended with feedback and persistent storage.",
     "contact": {
       "name": "TravelContext project"
     },
@@ -379,6 +379,132 @@
                       "detail": "City not found"
                     }
                   }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/routes/build": {
+      "post": {
+        "tags": [
+          "routes"
+        ],
+        "summary": "Build route plan",
+        "description": "Builds an ordered route from selected POIs or from generated recommendations. The route builder estimates distance, movement time, visit time, budget, and checks whether the plan fits time and budget constraints.",
+        "operationId": "build_route_endpoint_routes_build_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RouteBuildRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Built route plan.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoutePlanResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid route candidate.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "POI 1001 does not belong to trip city"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Trip request or POI was not found.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "tripNotFound": {
+                    "summary": "Trip request not found",
+                    "value": {
+                      "detail": "Trip request not found"
+                    }
+                  },
+                  "poiNotFound": {
+                    "summary": "POI not found",
+                    "value": {
+                      "detail": "POI not found"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/routes/{route_id}": {
+      "get": {
+        "tags": [
+          "routes"
+        ],
+        "summary": "Get route plan by id",
+        "description": "Returns a previously built in-memory route plan.",
+        "operationId": "get_route_endpoint_routes__route_id__get",
+        "parameters": [
+          {
+            "name": "route_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Route Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Route plan details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoutePlanResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Route plan was not found.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Route not found"
                 }
               }
             }
@@ -1098,6 +1224,377 @@
         ],
         "title": "RecommendationResponse"
       },
+      "RouteBuildRequest": {
+        "properties": {
+          "trip_request_id": {
+            "type": "integer",
+            "title": "Trip Request Id",
+            "description": "Existing trip request id.",
+            "examples": [
+              1
+            ]
+          },
+          "poi_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Poi Ids",
+            "description": "Optional explicit POI ids to include. If omitted, the backend uses the recommendation engine to select route candidates.",
+            "examples": [
+              [
+                6005,
+                6002,
+                6004,
+                6001
+              ]
+            ]
+          },
+          "max_points": {
+            "type": "integer",
+            "maximum": 20.0,
+            "minimum": 1.0,
+            "title": "Max Points",
+            "description": "Maximum number of POIs to include in the route.",
+            "default": 6,
+            "examples": [
+              5
+            ]
+          },
+          "optimize_order": {
+            "type": "boolean",
+            "title": "Optimize Order",
+            "description": "Whether to order POIs with a nearest-neighbor heuristic.",
+            "default": true,
+            "examples": [
+              true
+            ]
+          },
+          "strict_constraints": {
+            "type": "boolean",
+            "title": "Strict Constraints",
+            "description": "Skip POIs that would exceed time or budget constraints when possible.",
+            "default": true,
+            "examples": [
+              true
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "trip_request_id"
+        ],
+        "title": "RouteBuildRequest"
+      },
+      "RoutePlanResponse": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id",
+            "description": "Route plan id.",
+            "examples": [
+              1
+            ]
+          },
+          "trip_request_id": {
+            "type": "integer",
+            "title": "Trip Request Id",
+            "description": "Trip request id.",
+            "examples": [
+              1
+            ]
+          },
+          "city_id": {
+            "type": "integer",
+            "title": "City Id",
+            "description": "City id.",
+            "examples": [
+              6
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "built",
+              "partially_built",
+              "empty"
+            ],
+            "title": "Status",
+            "description": "Route build status.",
+            "examples": [
+              "built"
+            ]
+          },
+          "total_distance_km": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Total Distance Km",
+            "description": "Total route distance in kilometers.",
+            "examples": [
+              5.4
+            ]
+          },
+          "total_travel_minutes": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Total Travel Minutes",
+            "description": "Total estimated movement time.",
+            "examples": [
+              72
+            ]
+          },
+          "total_visit_minutes": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Total Visit Minutes",
+            "description": "Total estimated POI visit time.",
+            "examples": [
+              250
+            ]
+          },
+          "total_time_minutes": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Total Time Minutes",
+            "description": "Total movement plus visit time.",
+            "examples": [
+              322
+            ]
+          },
+          "estimated_budget": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Estimated Budget",
+            "description": "Total estimated route budget in Russian rubles.",
+            "examples": [
+              850
+            ]
+          },
+          "days_count": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Days Count",
+            "description": "Trip duration in days.",
+            "examples": [
+              1
+            ]
+          },
+          "daily_time_limit_minutes": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Daily Time Limit Minutes",
+            "description": "Available planning time per day in minutes.",
+            "examples": [
+              480
+            ]
+          },
+          "within_time_limit": {
+            "type": "boolean",
+            "title": "Within Time Limit",
+            "description": "Whether the route fits the total time limit.",
+            "examples": [
+              true
+            ]
+          },
+          "within_budget": {
+            "type": "boolean",
+            "title": "Within Budget",
+            "description": "Whether the route fits the profile budget.",
+            "examples": [
+              true
+            ]
+          },
+          "skipped_poi_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Skipped Poi Ids",
+            "description": "POI ids skipped because of route constraints.",
+            "examples": [
+              [
+                6008
+              ]
+            ]
+          },
+          "route_points": {
+            "items": {
+              "$ref": "#/components/schemas/RoutePointResponse"
+            },
+            "type": "array",
+            "title": "Route Points"
+          },
+          "explanation_summary": {
+            "type": "string",
+            "title": "Explanation Summary",
+            "description": "Human-readable route explanation."
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "trip_request_id",
+          "city_id",
+          "status",
+          "total_distance_km",
+          "total_travel_minutes",
+          "total_visit_minutes",
+          "total_time_minutes",
+          "estimated_budget",
+          "days_count",
+          "daily_time_limit_minutes",
+          "within_time_limit",
+          "within_budget",
+          "skipped_poi_ids",
+          "route_points",
+          "explanation_summary"
+        ],
+        "title": "RoutePlanResponse"
+      },
+      "RoutePointResponse": {
+        "properties": {
+          "order": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Order",
+            "description": "Point order in the route.",
+            "examples": [
+              1
+            ]
+          },
+          "poi_id": {
+            "type": "integer",
+            "title": "Poi Id",
+            "description": "POI id.",
+            "examples": [
+              6005
+            ]
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "POI name.",
+            "examples": [
+              "Золотой колос"
+            ]
+          },
+          "category": {
+            "type": "string",
+            "title": "Category",
+            "description": "POI category.",
+            "examples": [
+              "food"
+            ]
+          },
+          "latitude": {
+            "type": "number",
+            "title": "Latitude",
+            "description": "POI latitude.",
+            "examples": [
+              47.220524
+            ]
+          },
+          "longitude": {
+            "type": "number",
+            "title": "Longitude",
+            "description": "POI longitude.",
+            "examples": [
+              39.708275
+            ]
+          },
+          "leg_distance_km": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Leg Distance Km",
+            "description": "Distance from previous route point or city center.",
+            "examples": [
+              1.8
+            ]
+          },
+          "leg_travel_minutes": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Leg Travel Minutes",
+            "description": "Estimated travel time from previous route point.",
+            "examples": [
+              24
+            ]
+          },
+          "visit_minutes": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Visit Minutes",
+            "description": "Estimated visit duration.",
+            "examples": [
+              50
+            ]
+          },
+          "estimated_cost_rub": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Estimated Cost Rub",
+            "description": "Estimated cost for this point.",
+            "examples": [
+              500
+            ]
+          },
+          "cumulative_distance_km": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Cumulative Distance Km",
+            "description": "Route distance accumulated up to this point.",
+            "examples": [
+              1.8
+            ]
+          },
+          "cumulative_time_minutes": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Cumulative Time Minutes",
+            "description": "Travel plus visit time accumulated up to this point.",
+            "examples": [
+              74
+            ]
+          },
+          "cumulative_budget_rub": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Cumulative Budget Rub",
+            "description": "Budget accumulated up to this point.",
+            "examples": [
+              500
+            ]
+          },
+          "poi": {
+            "$ref": "#/components/schemas/PointOfInterestResponse"
+          }
+        },
+        "type": "object",
+        "required": [
+          "order",
+          "poi_id",
+          "name",
+          "category",
+          "latitude",
+          "longitude",
+          "leg_distance_km",
+          "leg_travel_minutes",
+          "visit_minutes",
+          "estimated_cost_rub",
+          "cumulative_distance_km",
+          "cumulative_time_minutes",
+          "cumulative_budget_rub",
+          "poi"
+        ],
+        "title": "RoutePointResponse"
+      },
       "TripRequestCreate": {
         "properties": {
           "city_id": {
@@ -1455,6 +1952,10 @@
     {
       "name": "planning",
       "description": "Trip requests and personalized recommendation generation."
+    },
+    {
+      "name": "routes",
+      "description": "Route building and route plan retrieval."
     }
   ]
 }

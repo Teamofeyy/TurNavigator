@@ -142,3 +142,34 @@ curl -X POST http://127.0.0.1:8000/recommendations/generate \
 ```
 
 The response includes `score`, `rank`, `matched_interests`, factor values, constraint statuses, and a human-readable explanation for each recommended POI.
+
+### `POST /routes/build`
+
+Builds an ordered route for an existing trip request.
+
+If `poi_ids` are omitted, the backend first generates recommendations and then turns the top candidates into a route. The route builder estimates:
+
+- distance between points;
+- movement time;
+- visit time;
+- total time;
+- estimated budget;
+- whether the route fits user constraints.
+
+Example:
+
+```bash
+curl -X POST http://127.0.0.1:8000/routes/build \
+  -H 'Content-Type: application/json' \
+  -d '{"trip_request_id":1,"max_points":5,"optimize_order":true,"strict_constraints":true}'
+```
+
+### `GET /routes/{route_id}`
+
+Returns a previously built in-memory route plan.
+
+Example:
+
+```bash
+curl http://127.0.0.1:8000/routes/1
+```

@@ -205,8 +205,8 @@
 
 - `POST /trip-requests` - создание запроса на планирование поездки, реализовано через in-memory store для MVP;
 - `POST /recommendations/generate` - генерация персонализированных рекомендаций, реализовано на seed-данных;
-- `POST /routes/build` - построение маршрута;
-- `GET /routes/{route_id}` - получение маршрута.
+- `POST /routes/build` - построение маршрута с расчетом расстояния, времени и бюджета, реализовано через in-memory store для MVP;
+- `GET /routes/{route_id}` - получение построенного маршрута, реализовано через in-memory store для MVP.
 
 ### Feedback
 
