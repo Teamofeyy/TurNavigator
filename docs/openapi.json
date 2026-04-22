@@ -3,7 +3,7 @@
   "info": {
     "title": "TravelContext API",
     "summary": "API for the intelligent travel planning DSS prototype.",
-    "description": "TravelContext API powers a prototype decision support system for personalized travel planning. The current API version exposes health checks, cities, and points of interest from seed data. It will be extended with recommendations, route planning, explanations, and feedback.",
+    "description": "TravelContext API powers a prototype decision support system for personalized travel planning. The current API version exposes health checks, cities, points of interest, trip requests, and personalized recommendations from seed data. It will be extended with route planning, feedback, and persistent storage.",
     "contact": {
       "name": "TravelContext project"
     },
@@ -280,6 +280,121 @@
           }
         }
       }
+    },
+    "/trip-requests": {
+      "post": {
+        "tags": [
+          "planning"
+        ],
+        "summary": "Create trip planning request",
+        "description": "Creates an in-memory trip planning request from city, user profile, trip duration, and resource constraints. The generated id can be used to request recommendations.",
+        "operationId": "create_trip_request_endpoint_trip_requests_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TripRequestCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created trip request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TripRequestResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "City was not found.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "City not found"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/recommendations/generate": {
+      "post": {
+        "tags": [
+          "planning"
+        ],
+        "summary": "Generate personalized recommendations",
+        "description": "Generates a ranked list of points of interest for an existing trip request. The scoring model combines interest match, budget fit, route convenience, pace fit, popularity, and data quality.",
+        "operationId": "generate_recommendations_endpoint_recommendations_generate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecommendationGenerateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Ranked recommendations with explanations.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecommendationListResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Trip request or city was not found.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "tripNotFound": {
+                    "summary": "Trip request not found",
+                    "value": {
+                      "detail": "Trip request not found"
+                    }
+                  },
+                  "cityNotFound": {
+                    "summary": "City not found",
+                    "value": {
+                      "detail": "City not found"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -411,6 +526,41 @@
           "pois_count"
         ],
         "title": "CityResponse"
+      },
+      "ConstraintStatus": {
+        "properties": {
+          "budget": {
+            "type": "string",
+            "title": "Budget",
+            "description": "Budget constraint status.",
+            "examples": [
+              "within_budget"
+            ]
+          },
+          "pace": {
+            "type": "string",
+            "title": "Pace",
+            "description": "Pace constraint status.",
+            "examples": [
+              "fits_moderate_pace"
+            ]
+          },
+          "distance": {
+            "type": "string",
+            "title": "Distance",
+            "description": "Distance constraint status.",
+            "examples": [
+              "near_city_center"
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "budget",
+          "pace",
+          "distance"
+        ],
+        "title": "ConstraintStatus"
       },
       "HTTPValidationError": {
         "properties": {
@@ -687,6 +837,566 @@
         ],
         "title": "PointOfInterestResponse"
       },
+      "RecommendationFactors": {
+        "properties": {
+          "interest_match": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Interest Match",
+            "description": "Interest match factor."
+          },
+          "budget_match": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Budget Match",
+            "description": "Budget fit factor."
+          },
+          "route_convenience": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Route Convenience",
+            "description": "Distance and route convenience factor."
+          },
+          "pace_match": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Pace Match",
+            "description": "Pace fit factor."
+          },
+          "popularity_score": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Popularity Score",
+            "description": "POI popularity factor."
+          },
+          "data_quality_score": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Data Quality Score",
+            "description": "POI data quality factor."
+          }
+        },
+        "type": "object",
+        "required": [
+          "interest_match",
+          "budget_match",
+          "route_convenience",
+          "pace_match",
+          "popularity_score",
+          "data_quality_score"
+        ],
+        "title": "RecommendationFactors"
+      },
+      "RecommendationGenerateRequest": {
+        "properties": {
+          "trip_request_id": {
+            "type": "integer",
+            "title": "Trip Request Id",
+            "description": "Previously created trip request id.",
+            "examples": [
+              1
+            ]
+          },
+          "limit": {
+            "type": "integer",
+            "maximum": 50.0,
+            "minimum": 1.0,
+            "title": "Limit",
+            "description": "Maximum number of recommendations to return.",
+            "default": 10,
+            "examples": [
+              8
+            ]
+          },
+          "include_accommodation": {
+            "type": "boolean",
+            "title": "Include Accommodation",
+            "description": "Whether accommodation objects should be included in recommendations.",
+            "default": false,
+            "examples": [
+              false
+            ]
+          },
+          "include_categories": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Include Categories",
+            "description": "Optional category allow-list.",
+            "examples": [
+              [
+                "history",
+                "culture",
+                "food",
+                "nature"
+              ]
+            ]
+          },
+          "exclude_categories": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Exclude Categories",
+            "description": "Optional category deny-list.",
+            "examples": [
+              [
+                "shopping"
+              ]
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "trip_request_id"
+        ],
+        "title": "RecommendationGenerateRequest"
+      },
+      "RecommendationListResponse": {
+        "properties": {
+          "trip_request_id": {
+            "type": "integer",
+            "title": "Trip Request Id",
+            "description": "Trip request id.",
+            "examples": [
+              1
+            ]
+          },
+          "city_id": {
+            "type": "integer",
+            "title": "City Id",
+            "description": "City id.",
+            "examples": [
+              6
+            ]
+          },
+          "total_candidates": {
+            "type": "integer",
+            "title": "Total Candidates",
+            "description": "Number of candidate POIs before limiting.",
+            "examples": [
+              7
+            ]
+          },
+          "recommendations": {
+            "items": {
+              "$ref": "#/components/schemas/RecommendationResponse"
+            },
+            "type": "array",
+            "title": "Recommendations"
+          }
+        },
+        "type": "object",
+        "required": [
+          "trip_request_id",
+          "city_id",
+          "total_candidates",
+          "recommendations"
+        ],
+        "title": "RecommendationListResponse"
+      },
+      "RecommendationResponse": {
+        "properties": {
+          "poi_id": {
+            "type": "integer",
+            "title": "Poi Id",
+            "description": "Recommended POI id.",
+            "examples": [
+              6005
+            ]
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Recommended POI name.",
+            "examples": [
+              "Золотой колос"
+            ]
+          },
+          "category": {
+            "type": "string",
+            "title": "Category",
+            "description": "Recommended POI category.",
+            "examples": [
+              "food"
+            ]
+          },
+          "score": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Score",
+            "description": "Final normalized recommendation score.",
+            "examples": [
+              0.86
+            ]
+          },
+          "rank": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Rank",
+            "description": "Recommendation rank.",
+            "examples": [
+              1
+            ]
+          },
+          "matched_interests": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Matched Interests",
+            "description": "User interests matched by this POI.",
+            "examples": [
+              [
+                "food",
+                "coffee"
+              ]
+            ]
+          },
+          "factors": {
+            "$ref": "#/components/schemas/RecommendationFactors"
+          },
+          "constraint_status": {
+            "$ref": "#/components/schemas/ConstraintStatus"
+          },
+          "explanation": {
+            "type": "string",
+            "title": "Explanation",
+            "description": "Human-readable recommendation explanation."
+          },
+          "poi": {
+            "$ref": "#/components/schemas/PointOfInterestResponse"
+          }
+        },
+        "type": "object",
+        "required": [
+          "poi_id",
+          "name",
+          "category",
+          "score",
+          "rank",
+          "matched_interests",
+          "factors",
+          "constraint_status",
+          "explanation",
+          "poi"
+        ],
+        "title": "RecommendationResponse"
+      },
+      "TripRequestCreate": {
+        "properties": {
+          "city_id": {
+            "type": "integer",
+            "title": "City Id",
+            "description": "City id for trip planning.",
+            "examples": [
+              6
+            ]
+          },
+          "profile": {
+            "$ref": "#/components/schemas/UserProfileInput"
+          },
+          "days_count": {
+            "type": "integer",
+            "maximum": 14.0,
+            "minimum": 1.0,
+            "title": "Days Count",
+            "description": "Trip duration in days.",
+            "default": 1,
+            "examples": [
+              1
+            ]
+          },
+          "daily_time_limit_hours": {
+            "type": "integer",
+            "maximum": 16.0,
+            "minimum": 1.0,
+            "title": "Daily Time Limit Hours",
+            "description": "Available planning time per day.",
+            "default": 8,
+            "examples": [
+              8
+            ]
+          },
+          "selected_interests": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Selected Interests",
+            "description": "Optional interests selected for this specific trip. If omitted, profile interests are used.",
+            "examples": [
+              [
+                "food",
+                "history",
+                "walking"
+              ]
+            ]
+          },
+          "constraints": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "boolean"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Constraints",
+            "description": "Additional planning constraints for future extensions.",
+            "examples": [
+              {
+                "avoid_expensive": true
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "city_id",
+          "profile"
+        ],
+        "title": "TripRequestCreate"
+      },
+      "TripRequestResponse": {
+        "properties": {
+          "city_id": {
+            "type": "integer",
+            "title": "City Id",
+            "description": "City id for trip planning.",
+            "examples": [
+              6
+            ]
+          },
+          "profile": {
+            "$ref": "#/components/schemas/UserProfileInput"
+          },
+          "days_count": {
+            "type": "integer",
+            "maximum": 14.0,
+            "minimum": 1.0,
+            "title": "Days Count",
+            "description": "Trip duration in days.",
+            "default": 1,
+            "examples": [
+              1
+            ]
+          },
+          "daily_time_limit_hours": {
+            "type": "integer",
+            "maximum": 16.0,
+            "minimum": 1.0,
+            "title": "Daily Time Limit Hours",
+            "description": "Available planning time per day.",
+            "default": 8,
+            "examples": [
+              8
+            ]
+          },
+          "selected_interests": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Selected Interests",
+            "description": "Optional interests selected for this specific trip. If omitted, profile interests are used.",
+            "examples": [
+              [
+                "food",
+                "history",
+                "walking"
+              ]
+            ]
+          },
+          "constraints": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "boolean"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Constraints",
+            "description": "Additional planning constraints for future extensions.",
+            "examples": [
+              {
+                "avoid_expensive": true
+              }
+            ]
+          },
+          "id": {
+            "type": "integer",
+            "title": "Id",
+            "description": "Created trip request id.",
+            "examples": [
+              1
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At",
+            "description": "Creation timestamp."
+          }
+        },
+        "type": "object",
+        "required": [
+          "city_id",
+          "profile",
+          "id",
+          "created_at"
+        ],
+        "title": "TripRequestResponse"
+      },
+      "UserProfileInput": {
+        "properties": {
+          "interests": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Interests",
+            "description": "User interests used for personalization.",
+            "examples": [
+              [
+                "culture",
+                "food",
+                "history"
+              ]
+            ]
+          },
+          "budget_level": {
+            "type": "string",
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ],
+            "title": "Budget Level",
+            "description": "Qualitative user budget level.",
+            "default": "medium",
+            "examples": [
+              "medium"
+            ]
+          },
+          "max_budget": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Max Budget",
+            "description": "Maximum available trip budget in Russian rubles.",
+            "examples": [
+              15000
+            ]
+          },
+          "pace": {
+            "type": "string",
+            "enum": [
+              "relaxed",
+              "moderate",
+              "intensive"
+            ],
+            "title": "Pace",
+            "description": "Preferred trip pace.",
+            "default": "moderate",
+            "examples": [
+              "moderate"
+            ]
+          },
+          "max_walking_distance_km": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Max Walking Distance Km",
+            "description": "Maximum preferred walking distance per day.",
+            "default": 8,
+            "examples": [
+              8
+            ]
+          },
+          "preferred_transport": {
+            "type": "string",
+            "enum": [
+              "walking",
+              "public_transport",
+              "car",
+              "mixed"
+            ],
+            "title": "Preferred Transport",
+            "description": "Preferred transport mode.",
+            "default": "walking",
+            "examples": [
+              "walking"
+            ]
+          },
+          "explanation_level": {
+            "type": "string",
+            "enum": [
+              "short",
+              "detailed"
+            ],
+            "title": "Explanation Level",
+            "description": "Preferred level of recommendation explanation.",
+            "default": "detailed",
+            "examples": [
+              "detailed"
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "interests",
+          "max_budget"
+        ],
+        "title": "UserProfileInput"
+      },
       "ValidationError": {
         "properties": {
           "loc": {
@@ -741,6 +1451,10 @@
     {
       "name": "points-of-interest",
       "description": "Tourism, food, accommodation, shopping, and entertainment objects."
+    },
+    {
+      "name": "planning",
+      "description": "Trip requests and personalized recommendation generation."
     }
   ]
 }

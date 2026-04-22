@@ -301,9 +301,10 @@ UserProfile можно сначала хранить прямо внутри Tri
 
 `recommender.py`
 
-- считает score;
-- фильтрует объекты по бюджету и интересам;
-- сортирует рекомендации.
+- считает score по факторам `interest_match`, `budget_match`, `route_convenience`, `pace_match`, `popularity_score`, `data_quality_score`;
+- фильтрует объекты по бюджету, интересам и категориям;
+- сортирует рекомендации;
+- формирует объяснение для каждого рекомендованного объекта.
 
 `route_builder.py`
 
