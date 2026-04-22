@@ -59,4 +59,6 @@ GET /cities/{city_id}/pois
 GET /pois/{poi_id}
 POST /trip-requests
 POST /recommendations/generate
+POST /routes/build
+GET /routes/{route_id}
 ```

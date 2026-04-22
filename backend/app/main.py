@@ -4,6 +4,7 @@ from app.api.routes.cities import router as cities_router
 from app.api.routes.health import router as health_router
 from app.api.routes.planning import router as planning_router
 from app.api.routes.pois import router as pois_router
+from app.api.routes.routes import router as routes_router
 
 OPENAPI_TAGS = [
     {
@@ -22,6 +23,10 @@ OPENAPI_TAGS = [
         "name": "planning",
         "description": "Trip requests and personalized recommendation generation.",
     },
+    {
+        "name": "routes",
+        "description": "Route building and route plan retrieval.",
+    },
 ]
 
 
@@ -34,7 +39,7 @@ def create_app() -> FastAPI:
             "personalized travel planning. The current API version exposes "
             "health checks, cities, points of interest, trip requests, and "
             "personalized recommendations from seed data. It will be extended "
-            "with route planning, feedback, and persistent storage."
+            "with feedback and persistent storage."
         ),
         version="0.1.0",
         docs_url="/docs",
@@ -58,6 +63,7 @@ def create_app() -> FastAPI:
     app.include_router(cities_router)
     app.include_router(pois_router)
     app.include_router(planning_router)
+    app.include_router(routes_router)
     return app
 
 

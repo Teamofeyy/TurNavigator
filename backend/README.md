@@ -60,4 +60,8 @@ curl -X POST http://127.0.0.1:8000/trip-requests \
 curl -X POST http://127.0.0.1:8000/recommendations/generate \
   -H 'Content-Type: application/json' \
   -d '{"trip_request_id":1,"limit":5}'
+curl -X POST http://127.0.0.1:8000/routes/build \
+  -H 'Content-Type: application/json' \
+  -d '{"trip_request_id":1,"max_points":5,"optimize_order":true,"strict_constraints":true}'
+curl http://127.0.0.1:8000/routes/1
 ```
