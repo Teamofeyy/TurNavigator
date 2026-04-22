@@ -1,11 +1,21 @@
 from fastapi import FastAPI
 
+from app.api.routes.cities import router as cities_router
 from app.api.routes.health import router as health_router
+from app.api.routes.pois import router as pois_router
 
 OPENAPI_TAGS = [
     {
         "name": "health",
         "description": "Service health and availability checks.",
+    },
+    {
+        "name": "cities",
+        "description": "Cities available for travel planning in the MVP dataset.",
+    },
+    {
+        "name": "points-of-interest",
+        "description": "Tourism, food, accommodation, shopping, and entertainment objects.",
     },
 ]
 
@@ -16,9 +26,10 @@ def create_app() -> FastAPI:
         summary="API for the intelligent travel planning DSS prototype.",
         description=(
             "TravelContext API powers a prototype decision support system for "
-            "personalized travel planning. The current API version exposes a "
-            "health check and will be extended with cities, points of interest, "
-            "recommendations, route planning, explanations, and feedback."
+            "personalized travel planning. The current API version exposes "
+            "health checks, cities, and points of interest from seed data. "
+            "It will be extended with recommendations, route planning, "
+            "explanations, and feedback."
         ),
         version="0.1.0",
         docs_url="/docs",
@@ -39,6 +50,8 @@ def create_app() -> FastAPI:
         ],
     )
     app.include_router(health_router)
+    app.include_router(cities_router)
+    app.include_router(pois_router)
     return app
 
 
