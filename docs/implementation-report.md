@@ -24,9 +24,11 @@
 
 ### Frontend
 
-- Next.js;
+- Next.js 16 (App Router);
+- React 19;
 - TypeScript;
-- Tailwind CSS;
+- Tailwind CSS v4;
+- shadcn/ui;
 - MapLibre GL JS или Leaflet для карты;
 - fetch/axios для обращения к backend API.
 

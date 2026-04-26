@@ -62,3 +62,45 @@ POST /recommendations/generate
 POST /routes/build
 GET /routes/{route_id}
 ```
+
+## Frontend
+
+Frontend находится в папке `frontend` и использует Next.js 16 + React 19 + Tailwind CSS v4 + shadcn/ui.
+
+### Переменные окружения
+
+При необходимости можно указать адрес backend API:
+
+```bash
+cd frontend
+cp .env.example .env.local
+```
+
+По умолчанию используется:
+
+```text
+http://127.0.0.1:8000
+```
+
+### Запуск
+
+```bash
+cd frontend
+npm run dev
+```
+
+После запуска frontend доступен по адресу:
+
+```text
+http://127.0.0.1:3000
+```
+
+Что уже есть на frontend:
+
+- экран планирования поездки;
+- выбор города, интересов, бюджета, темпа и транспорта;
+- запуск полного backend-сценария:
+  - создание trip request;
+  - генерация рекомендаций;
+  - построение маршрута;
+- отображение рекомендаций и маршрутного плана.
