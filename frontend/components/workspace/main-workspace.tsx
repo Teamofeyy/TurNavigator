@@ -181,10 +181,16 @@ export function MainWorkspace({
               <div className="space-y-6">
                 <RouteMap route={route} transport={preferredTransport} />
                 <RouteSummary route={route} />
-                <RouteFeedback route={route} />
+                <RouteFeedback key={route.id} route={route} />
                 <div>
                   <h3 className="font-semibold text-lg mb-4 text-foreground">Пошаговый план</h3>
-                  <RouteStepsList points={route.route_points} />
+                  <RouteStepsList
+                    points={route.route_points}
+                    startLabel={route.start_location?.name || route.start_location?.address || undefined}
+                    endLabel={route.end_location?.name || route.end_location?.address || undefined}
+                    returnLegDistanceKm={route.return_leg_distance_km}
+                    returnLegTravelMinutes={route.return_leg_travel_minutes}
+                  />
                 </div>
               </div>
             )}
