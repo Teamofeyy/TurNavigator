@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { useMemo, useState } from 'react'
 
 import { CameraIcon } from '@/components/ui/icons'
@@ -40,10 +41,12 @@ export function PoiImage({
       )}
     >
       {activeImage && activeImageProxy ? (
-        <img
+        <Image
           src={activeImageProxy}
           alt={poi.name}
-          loading="lazy"
+          fill
+          unoptimized
+          sizes={compact ? '(max-width: 1024px) 100vw, 40vw' : '(max-width: 1024px) 100vw, 60vw'}
           className={cn('h-full w-full object-cover', imageClassName)}
           onError={() => {
             setFailedUrls((prev) => (prev.includes(activeImage) ? prev : [...prev, activeImage]))

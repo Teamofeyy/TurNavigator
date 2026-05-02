@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 
 import { api, ApiError } from '@/lib/api'
 import type { FeedbackResponse, Route } from '@/lib/types'
@@ -28,13 +28,6 @@ export function RouteFeedback({ route }: RouteFeedbackProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [submittedFeedback, setSubmittedFeedback] = useState<FeedbackResponse | null>(null)
-
-  useEffect(() => {
-    setRating(null)
-    setComment('')
-    setError(null)
-    setSubmittedFeedback(null)
-  }, [route.id])
 
   const selectedRatingLabel = useMemo(
     () => (rating ? ratingLabels[rating] : 'Оценка пока не выбрана'),
