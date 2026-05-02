@@ -5,6 +5,10 @@ description = "FastAPI backend for the TravelContext intelligent travel planning
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "alembic>=1.18.4",
+    "certifi>=2026.2.28",
     "fastapi>=0.136.0",
+    "psycopg[binary]>=3.2",
+    "sqlalchemy>=2.0.49",
     "uvicorn[standard]>=0.45.0",
 ]

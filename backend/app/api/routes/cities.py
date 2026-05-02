@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Query, status
 
 from app.schemas.city import CityResponse
 from app.schemas.poi import PointOfInterestResponse
-from app.services.seed_loader import get_city, list_cities, list_city_pois
+from app.services.catalog_service import get_city, list_cities, list_city_pois
 
 router = APIRouter(tags=["cities"])
 
@@ -78,7 +78,7 @@ async def get_city_points_of_interest(
     limit: int = Query(
         default=50,
         ge=1,
-        le=100,
+        le=250,
         description="Maximum number of POI records to return.",
     ),
     offset: int = Query(

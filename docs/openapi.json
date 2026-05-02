@@ -168,7 +168,7 @@
             "required": false,
             "schema": {
               "type": "integer",
-              "maximum": 100,
+              "maximum": 250,
               "minimum": 1,
               "description": "Maximum number of POI records to return.",
               "default": 50,
@@ -521,6 +521,110 @@
           }
         }
       }
+    },
+    "/feedback": {
+      "post": {
+        "tags": [
+          "feedback"
+        ],
+        "summary": "Save route feedback",
+        "description": "Stores a user evaluation for a previously built route. The feedback entry is also written into the in-memory decision log for MVP experiments.",
+        "operationId": "create_feedback_endpoint_feedback_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FeedbackCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Saved feedback entry.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeedbackResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Route was not found.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Route not found"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/decision-logs": {
+      "get": {
+        "tags": [
+          "feedback"
+        ],
+        "summary": "List decision log entries",
+        "description": "Returns recent feedback and decision log entries created during the MVP session. This is useful for experiments and demonstration of explainable planning history.",
+        "operationId": "list_decision_logs_endpoint_decision_logs_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "description": "Maximum number of log entries to return.",
+              "default": 20,
+              "title": "Limit"
+            },
+            "description": "Maximum number of log entries to return."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Recent decision log entries.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DecisionLogResponse"
+                  },
+                  "title": "Response List Decision Logs Endpoint Decision Logs Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -688,6 +792,264 @@
         ],
         "title": "ConstraintStatus"
       },
+      "DecisionLogResponse": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id",
+            "description": "Saved feedback id.",
+            "examples": [
+              1
+            ]
+          },
+          "route_id": {
+            "type": "integer",
+            "title": "Route Id",
+            "description": "Route id.",
+            "examples": [
+              1
+            ]
+          },
+          "trip_request_id": {
+            "type": "integer",
+            "title": "Trip Request Id",
+            "description": "Trip request id.",
+            "examples": [
+              1
+            ]
+          },
+          "city_id": {
+            "type": "integer",
+            "title": "City Id",
+            "description": "City id.",
+            "examples": [
+              6
+            ]
+          },
+          "rating": {
+            "type": "integer",
+            "maximum": 5.0,
+            "minimum": 1.0,
+            "title": "Rating",
+            "description": "User rating from 1 to 5.",
+            "examples": [
+              4
+            ]
+          },
+          "comment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comment",
+            "description": "Optional user comment.",
+            "examples": [
+              "Маршрут хороший, но хотелось бы больше еды и меньше музеев."
+            ]
+          },
+          "route_points_count": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Route Points Count",
+            "description": "Number of points in the evaluated route.",
+            "examples": [
+              5
+            ]
+          },
+          "estimated_budget": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Estimated Budget",
+            "description": "Estimated budget of the evaluated route in rubles.",
+            "examples": [
+              2950
+            ]
+          },
+          "total_time_minutes": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Total Time Minutes",
+            "description": "Total estimated route time in minutes.",
+            "examples": [
+              481
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At",
+            "description": "Feedback creation timestamp."
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "route_id",
+          "trip_request_id",
+          "city_id",
+          "rating",
+          "route_points_count",
+          "estimated_budget",
+          "total_time_minutes",
+          "created_at"
+        ],
+        "title": "DecisionLogResponse"
+      },
+      "FeedbackCreate": {
+        "properties": {
+          "route_id": {
+            "type": "integer",
+            "title": "Route Id",
+            "description": "Built route id to evaluate.",
+            "examples": [
+              1
+            ]
+          },
+          "rating": {
+            "type": "integer",
+            "maximum": 5.0,
+            "minimum": 1.0,
+            "title": "Rating",
+            "description": "User rating of route usefulness from 1 to 5.",
+            "examples": [
+              4
+            ]
+          },
+          "comment": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 1000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comment",
+            "description": "Optional user comment about the route quality.",
+            "examples": [
+              "Маршрут хороший, но хотелось бы меньше музеев и больше прогулок."
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "route_id",
+          "rating"
+        ],
+        "title": "FeedbackCreate"
+      },
+      "FeedbackResponse": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id",
+            "description": "Saved feedback id.",
+            "examples": [
+              1
+            ]
+          },
+          "route_id": {
+            "type": "integer",
+            "title": "Route Id",
+            "description": "Route id.",
+            "examples": [
+              1
+            ]
+          },
+          "trip_request_id": {
+            "type": "integer",
+            "title": "Trip Request Id",
+            "description": "Trip request id.",
+            "examples": [
+              1
+            ]
+          },
+          "city_id": {
+            "type": "integer",
+            "title": "City Id",
+            "description": "City id.",
+            "examples": [
+              6
+            ]
+          },
+          "rating": {
+            "type": "integer",
+            "maximum": 5.0,
+            "minimum": 1.0,
+            "title": "Rating",
+            "description": "User rating from 1 to 5.",
+            "examples": [
+              4
+            ]
+          },
+          "comment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comment",
+            "description": "Optional user comment.",
+            "examples": [
+              "Маршрут хороший, но хотелось бы больше еды и меньше музеев."
+            ]
+          },
+          "route_points_count": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Route Points Count",
+            "description": "Number of points in the evaluated route.",
+            "examples": [
+              5
+            ]
+          },
+          "estimated_budget": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Estimated Budget",
+            "description": "Estimated budget of the evaluated route in rubles.",
+            "examples": [
+              2950
+            ]
+          },
+          "total_time_minutes": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Total Time Minutes",
+            "description": "Total estimated route time in minutes.",
+            "examples": [
+              481
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At",
+            "description": "Feedback creation timestamp."
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "route_id",
+          "trip_request_id",
+          "city_id",
+          "rating",
+          "route_points_count",
+          "estimated_budget",
+          "total_time_minutes",
+          "created_at"
+        ],
+        "title": "FeedbackResponse"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -717,6 +1079,212 @@
           "status"
         ],
         "title": "HealthResponse"
+      },
+      "POIImage": {
+        "properties": {
+          "provider": {
+            "type": "string",
+            "title": "Provider",
+            "description": "Image source provider, for example wikimedia or opentripmap.",
+            "examples": [
+              "wikimedia"
+            ]
+          },
+          "original_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Original Url",
+            "description": "URL of original or high-resolution image.",
+            "examples": [
+              "https://upload.wikimedia.org/.../example.jpg"
+            ]
+          },
+          "thumbnail_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thumbnail Url",
+            "description": "URL of resized preview image.",
+            "examples": [
+              "https://upload.wikimedia.org/.../320px-example.jpg"
+            ]
+          },
+          "source_page_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Page Url",
+            "description": "Human-readable source page with attribution and license information.",
+            "examples": [
+              "https://commons.wikimedia.org/wiki/File:Example.jpg"
+            ]
+          },
+          "license": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "License",
+            "description": "Image license if known.",
+            "examples": [
+              "CC BY-SA 4.0"
+            ]
+          },
+          "author": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Author",
+            "description": "Image author if known.",
+            "examples": [
+              "Ivan Ivanov"
+            ]
+          },
+          "attribution_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attribution Text",
+            "description": "Prepared attribution text for frontend display.",
+            "examples": [
+              "Photo: Ivan Ivanov, CC BY-SA 4.0"
+            ]
+          },
+          "width": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Width",
+            "description": "Original image width in pixels."
+          },
+          "height": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Height",
+            "description": "Original image height in pixels."
+          },
+          "is_primary": {
+            "type": "boolean",
+            "title": "Is Primary",
+            "description": "Whether the image is the primary image for the POI.",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "provider"
+        ],
+        "title": "POIImage"
+      },
+      "POISourceLink": {
+        "properties": {
+          "provider": {
+            "type": "string",
+            "title": "Provider",
+            "description": "External source provider name.",
+            "examples": [
+              "opentripmap"
+            ]
+          },
+          "external_id": {
+            "type": "string",
+            "title": "External Id",
+            "description": "Identifier of the POI in the external source.",
+            "examples": [
+              "R4682064"
+            ]
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url",
+            "description": "Human-readable or API URL for this source record if available.",
+            "examples": [
+              "https://www.wikidata.org/wiki/Q171223"
+            ]
+          },
+          "license": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "License",
+            "description": "Known license associated with this source payload.",
+            "examples": [
+              "ODbL"
+            ]
+          },
+          "last_synced_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Synced At",
+            "description": "Timestamp when the data from this source was last synchronized."
+          }
+        },
+        "type": "object",
+        "required": [
+          "provider",
+          "external_id"
+        ],
+        "title": "POISourceLink"
       },
       "PointOfInterestResponse": {
         "properties": {
@@ -865,6 +1433,51 @@
               "Q171223"
             ]
           },
+          "wikipedia_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Wikipedia Title",
+            "description": "Wikipedia article title if linked.",
+            "examples": [
+              "Казанский кремль"
+            ]
+          },
+          "wikipedia_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Wikipedia Url",
+            "description": "Wikipedia article URL if linked.",
+            "examples": [
+              "https://ru.wikipedia.org/wiki/Казанский_кремль"
+            ]
+          },
+          "wikimedia_commons": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Wikimedia Commons",
+            "description": "Wikimedia Commons file or category id if linked.",
+            "examples": [
+              "Category:Kazan Kremlin"
+            ]
+          },
           "osm_tags": {
             "additionalProperties": {
               "type": "string"
@@ -938,6 +1551,65 @@
                 "culture"
               ]
             ]
+          },
+          "interest_source": {
+            "type": "string",
+            "title": "Interest Source",
+            "description": "How interest tags were assigned: manual, automatic, or mixed.",
+            "default": "manual",
+            "examples": [
+              "manual+automatic"
+            ]
+          },
+          "primary_image": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/POIImage"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Primary image metadata for the POI."
+          },
+          "images": {
+            "items": {
+              "$ref": "#/components/schemas/POIImage"
+            },
+            "type": "array",
+            "title": "Images",
+            "description": "All available image candidates with attribution metadata."
+          },
+          "source_links": {
+            "items": {
+              "$ref": "#/components/schemas/POISourceLink"
+            },
+            "type": "array",
+            "title": "Source Links",
+            "description": "Provenance links to external source records used for this POI."
+          },
+          "data_freshness_days": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Data Freshness Days",
+            "description": "How old the current cached POI record is in days.",
+            "default": 30,
+            "examples": [
+              7
+            ]
+          },
+          "last_enriched_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Enriched At",
+            "description": "Timestamp when the POI was last enriched from external sources."
           }
         },
         "type": "object",
@@ -1956,6 +2628,10 @@
     {
       "name": "routes",
       "description": "Route building and route plan retrieval."
+    },
+    {
+      "name": "feedback",
+      "description": "User route evaluation and in-memory decision log entries."
     }
   ]
 }

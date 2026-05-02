@@ -2,10 +2,10 @@ from fastapi import APIRouter, HTTPException, status
 
 from app.schemas.poi import PointOfInterestResponse
 from app.schemas.route import RouteBuildRequest, RoutePlanResponse
+from app.services.catalog_service import get_city, get_poi
 from app.services.recommender import generate_recommendations
 from app.services.route_builder import build_route_plan
 from app.services.route_store import get_route, save_route
-from app.services.seed_loader import get_city, get_poi
 from app.services.trip_store import get_trip_request
 
 router = APIRouter(tags=["routes"])

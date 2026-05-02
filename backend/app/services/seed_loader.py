@@ -4,6 +4,7 @@ from pathlib import Path
 
 from app.schemas.city import CityBase, CityResponse
 from app.schemas.poi import PointOfInterestResponse
+from app.services.poi_enrichment import enrich_seed_poi_record
 
 SEEDS_DIR = Path(__file__).resolve().parents[1] / "seeds"
 
@@ -20,7 +21,10 @@ def get_city_records() -> tuple[CityBase, ...]:
 
 @lru_cache
 def get_poi_records() -> tuple[PointOfInterestResponse, ...]:
-    return tuple(PointOfInterestResponse.model_validate(item) for item in _read_seed_file("pois.json"))
+    return tuple(
+        PointOfInterestResponse.model_validate(enrich_seed_poi_record(item))
+        for item in _read_seed_file("pois.json")
+    )
 
 
 def list_cities() -> list[CityResponse]:

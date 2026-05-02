@@ -82,10 +82,18 @@ If the city does not exist, the API returns `404`.
 
 Returns points of interest for a city.
 
+Each POI now includes not only category and planning fields, but also enrichment metadata:
+
+- `interests` and `interest_source`;
+- `wikipedia_title`, `wikipedia_url`, `wikimedia_commons`;
+- `primary_image`, `images`;
+- `source_links`;
+- `data_freshness_days`, `last_enriched_at`.
+
 Supported query parameters:
 
 - `category` - optional normalized category filter, for example `food` or `history`;
-- `limit` - maximum number of objects to return, from 1 to 100;
+- `limit` - maximum number of objects to return, from 1 to 250;
 - `offset` - number of objects to skip.
 
 Example:
@@ -172,4 +180,26 @@ Example:
 
 ```bash
 curl http://127.0.0.1:8000/routes/1
+```
+
+### `POST /feedback`
+
+Saves user feedback for a built route and appends it to the in-memory decision log.
+
+Example:
+
+```bash
+curl -X POST http://127.0.0.1:8000/feedback \
+  -H 'Content-Type: application/json' \
+  -d '{"trip_request_id":1,"route_id":1,"rating":5,"comment":"Хороший маршрут"}'
+```
+
+### `GET /decision-logs`
+
+Returns recent decision log entries collected from user feedback.
+
+Example:
+
+```bash
+curl "http://127.0.0.1:8000/decision-logs?limit=10"
 ```

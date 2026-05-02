@@ -6,8 +6,8 @@ from app.schemas.planning import (
     TripRequestCreate,
     TripRequestResponse,
 )
+from app.services.catalog_service import get_city
 from app.services.recommender import generate_recommendations
-from app.services.seed_loader import get_city
 from app.services.trip_store import create_trip_request, get_trip_request
 
 router = APIRouter(tags=["planning"])

@@ -1,0 +1,40 @@
+services:
+  postgres:
+    image: postgres:18.3
+    container_name: travelcontext-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-travelcontext}
+      POSTGRES_USER: ${POSTGRES_USER:-travelcontext}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-travelcontext}
+    ports:
+      - "${POSTGRES_PORT:-54329}:5432"
+    volumes:
+      - travelcontext_postgres_data:/var/lib/postgresql
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-travelcontext} -d ${POSTGRES_DB:-travelcontext}"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: travelcontext-pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@example.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-admin}
+    ports:
+      - "${PGADMIN_PORT:-5050}:80"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+
+volumes:
+  travelcontext_postgres_data:
+  pgadmin_data:

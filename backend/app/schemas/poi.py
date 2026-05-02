@@ -1,4 +1,74 @@
+from datetime import datetime
+
 from pydantic import BaseModel, Field
+
+
+class POIImage(BaseModel):
+    provider: str = Field(
+        description="Image source provider, for example wikimedia or opentripmap.",
+        examples=["wikimedia"],
+    )
+    original_url: str | None = Field(
+        default=None,
+        description="URL of original or high-resolution image.",
+        examples=["https://upload.wikimedia.org/.../example.jpg"],
+    )
+    thumbnail_url: str | None = Field(
+        default=None,
+        description="URL of resized preview image.",
+        examples=["https://upload.wikimedia.org/.../320px-example.jpg"],
+    )
+    source_page_url: str | None = Field(
+        default=None,
+        description="Human-readable source page with attribution and license information.",
+        examples=["https://commons.wikimedia.org/wiki/File:Example.jpg"],
+    )
+    license: str | None = Field(
+        default=None,
+        description="Image license if known.",
+        examples=["CC BY-SA 4.0"],
+    )
+    author: str | None = Field(
+        default=None,
+        description="Image author if known.",
+        examples=["Ivan Ivanov"],
+    )
+    attribution_text: str | None = Field(
+        default=None,
+        description="Prepared attribution text for frontend display.",
+        examples=["Photo: Ivan Ivanov, CC BY-SA 4.0"],
+    )
+    width: int | None = Field(default=None, description="Original image width in pixels.")
+    height: int | None = Field(default=None, description="Original image height in pixels.")
+    is_primary: bool = Field(
+        default=True,
+        description="Whether the image is the primary image for the POI.",
+    )
+
+
+class POISourceLink(BaseModel):
+    provider: str = Field(
+        description="External source provider name.",
+        examples=["opentripmap"],
+    )
+    external_id: str = Field(
+        description="Identifier of the POI in the external source.",
+        examples=["R4682064"],
+    )
+    url: str | None = Field(
+        default=None,
+        description="Human-readable or API URL for this source record if available.",
+        examples=["https://www.wikidata.org/wiki/Q171223"],
+    )
+    license: str | None = Field(
+        default=None,
+        description="Known license associated with this source payload.",
+        examples=["ODbL"],
+    )
+    last_synced_at: datetime | None = Field(
+        default=None,
+        description="Timestamp when the data from this source was last synchronized.",
+    )
 
 
 class PointOfInterestResponse(BaseModel):
@@ -36,6 +106,21 @@ class PointOfInterestResponse(BaseModel):
         description="Linked Wikidata Q-id if available.",
         examples=["Q171223"],
     )
+    wikipedia_title: str | None = Field(
+        default=None,
+        description="Wikipedia article title if linked.",
+        examples=["Казанский кремль"],
+    )
+    wikipedia_url: str | None = Field(
+        default=None,
+        description="Wikipedia article URL if linked.",
+        examples=["https://ru.wikipedia.org/wiki/Казанский_кремль"],
+    )
+    wikimedia_commons: str | None = Field(
+        default=None,
+        description="Wikimedia Commons file or category id if linked.",
+        examples=["Category:Kazan Kremlin"],
+    )
     osm_tags: dict[str, str] = Field(
         description="Source-like OSM tags used for category mapping.",
         examples=[{"tourism": "museum"}],
@@ -69,4 +154,31 @@ class PointOfInterestResponse(BaseModel):
     interests: list[str] = Field(
         description="Interest tags used by the recommendation engine.",
         examples=[["history", "architecture", "culture"]],
+    )
+    interest_source: str = Field(
+        default="manual",
+        description="How interest tags were assigned: manual, automatic, or mixed.",
+        examples=["manual+automatic"],
+    )
+    primary_image: POIImage | None = Field(
+        default=None,
+        description="Primary image metadata for the POI.",
+    )
+    images: list[POIImage] = Field(
+        default_factory=list,
+        description="All available image candidates with attribution metadata.",
+    )
+    source_links: list[POISourceLink] = Field(
+        default_factory=list,
+        description="Provenance links to external source records used for this POI.",
+    )
+    data_freshness_days: int = Field(
+        default=30,
+        ge=0,
+        description="How old the current cached POI record is in days.",
+        examples=[7],
+    )
+    last_enriched_at: datetime | None = Field(
+        default=None,
+        description="Timestamp when the POI was last enriched from external sources.",
     )
