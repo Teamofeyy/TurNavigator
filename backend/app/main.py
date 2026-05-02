@@ -35,7 +35,7 @@ OPENAPI_TAGS = [
     },
     {
         "name": "feedback",
-        "description": "User route evaluation and in-memory decision log entries.",
+        "description": "User route evaluation and persisted decision log entries.",
     },
 ]
 
