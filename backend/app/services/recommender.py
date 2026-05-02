@@ -8,7 +8,7 @@ from app.schemas.planning import (
     TripRequestResponse,
 )
 from app.schemas.poi import PointOfInterestResponse
-from app.services.seed_loader import list_city_pois
+from app.services.catalog_service import list_city_pois
 
 PRICE_LEVEL_FIT: dict[str, dict[str, float]] = {
     "low": {"free": 1.0, "low": 0.95, "medium": 0.45, "high": 0.1},
@@ -22,6 +22,63 @@ PACE_VISIT_LIMITS: dict[str, tuple[int, int]] = {
     "intensive": (45, 240),
 }
 
+PRIMARY_INTEREST_CATEGORIES = {
+    "history",
+    "culture",
+    "food",
+    "nature",
+    "architecture",
+    "entertainment",
+    "shopping",
+    "nightlife",
+}
+
+MARKET_SUBCATEGORIES = {"market", "marketplace"}
+
+INTEREST_SUBCATEGORY_WEIGHTS: dict[str, dict[str, float]] = {
+    "food": {
+        "restaurant": 1.0,
+        "cafe": 0.95,
+        "confectionery_cafe": 0.92,
+        "confectionery": 0.88,
+        "bakery": 0.86,
+        "food_court": 0.72,
+        "fast_food": 0.58,
+        "bar": 0.48,
+        "pub": 0.48,
+        "biergarten": 0.48,
+        "market": 0.0,
+        "marketplace": 0.0,
+        "supermarket": 0.0,
+        "convenience_store": 0.0,
+    },
+    "nightlife": {
+        "nightclub": 1.0,
+        "bar": 0.96,
+        "pub": 0.94,
+        "biergarten": 0.9,
+    },
+    "shopping": {
+        "mall": 1.0,
+        "department_store": 0.95,
+        "clothes_store": 0.9,
+        "shoes_store": 0.9,
+        "sports_store": 0.88,
+        "jewelry_store": 0.86,
+        "cosmetics_store": 0.86,
+        "electronics_store": 0.84,
+        "mobile_phone_store": 0.8,
+        "bags_store": 0.8,
+        "optician": 0.74,
+        "bookstore": 0.72,
+        "gift_shop": 0.68,
+        "souvenir_shop": 0.66,
+        "shop": 0.64,
+        "market": 0.0,
+        "marketplace": 0.0,
+    },
+}
+
 
 def generate_recommendations(
     trip_request: TripRequestResponse,
@@ -33,13 +90,16 @@ def generate_recommendations(
 ) -> tuple[list[RecommendationResponse], int]:
     include_set = _normalize_optional_set(include_categories)
     exclude_set = set(_normalize_list(exclude_categories or []))
+    intent_categories = _intent_categories(trip_request)
     if not include_accommodation:
         exclude_set.add("accommodation")
 
+    catalog_limit = min(max(city.pois_count, limit * 20, 100), 500)
     candidates = [
         poi
-        for poi in list_city_pois(city_id=trip_request.city_id, limit=100, offset=0)
+        for poi in list_city_pois(city_id=trip_request.city_id, limit=catalog_limit, offset=0)
         if _is_allowed_category(poi, include_set, exclude_set)
+        and _matches_intent_categories(poi=poi, intent_categories=intent_categories)
     ]
 
     scored = [
@@ -50,10 +110,77 @@ def generate_recommendations(
         )
         for poi in candidates
     ]
-    recommendations = sorted(scored, key=lambda item: item.score, reverse=True)
+    recommendations = _rank_recommendations(
+        scored,
+        trip_request=trip_request,
+        intent_categories=intent_categories,
+    )
     for index, recommendation in enumerate(recommendations, start=1):
         recommendation.rank = index
     return recommendations[:limit], len(candidates)
+
+
+def _rank_recommendations(
+    scored: list[RecommendationResponse],
+    *,
+    trip_request: TripRequestResponse,
+    intent_categories: list[str],
+) -> list[RecommendationResponse]:
+    interests = _trip_interests(trip_request)
+    relevant = [item for item in scored if item.factors.interest_match > 0]
+    fallback = [item for item in scored if item.factors.interest_match <= 0]
+    if len(intent_categories) > 1:
+        return [
+            *_interleave_by_category(
+                _sort_recommendations(relevant, interests=interests),
+                category_order=intent_categories,
+            ),
+            *_sort_recommendations(fallback, interests=interests),
+        ]
+    return [
+        *_sort_recommendations(relevant, interests=interests),
+        *_sort_recommendations(fallback, interests=interests),
+    ]
+
+
+def _interleave_by_category(
+    items: list[RecommendationResponse],
+    *,
+    category_order: list[str],
+) -> list[RecommendationResponse]:
+    buckets = {
+        category: [item for item in items if item.poi.category == category]
+        for category in category_order
+    }
+    item_ids = {id(item) for bucket in buckets.values() for item in bucket}
+    other_items = [item for item in items if id(item) not in item_ids]
+
+    interleaved: list[RecommendationResponse] = []
+    while any(buckets.values()):
+        for category in category_order:
+            bucket = buckets[category]
+            if bucket:
+                interleaved.append(bucket.pop(0))
+
+    return [*interleaved, *other_items]
+
+
+def _sort_recommendations(
+    items: list[RecommendationResponse],
+    *,
+    interests: list[str],
+) -> list[RecommendationResponse]:
+    return sorted(
+        items,
+        key=lambda item: (
+            item.score,
+            _topic_priority_score(item.poi, interests),
+            bool(item.poi.primary_image),
+            item.poi.data_quality_score,
+            item.poi.popularity_score,
+        ),
+        reverse=True,
+    )
 
 
 def _score_poi(
@@ -105,18 +232,90 @@ def _trip_interests(trip_request: TripRequestResponse) -> list[str]:
     return _normalize_list(trip_request.selected_interests or trip_request.profile.interests)
 
 
+def _intent_categories(trip_request: TripRequestResponse) -> list[str]:
+    seen: set[str] = set()
+    categories: list[str] = []
+    for interest in _trip_interests(trip_request):
+        if interest not in PRIMARY_INTEREST_CATEGORIES or interest in seen:
+            continue
+        seen.add(interest)
+        categories.append(interest)
+    return categories
+
+
 def _matched_interests(poi: PointOfInterestResponse, interests: list[str]) -> list[str]:
-    poi_terms = _poi_terms(poi)
-    return sorted(set(interests).intersection(poi_terms))
+    return sorted(
+        {
+            interest
+            for interest in set(interests)
+            if _single_interest_match_score(poi=poi, interest=interest) > 0
+        }
+    )
 
 
 def _interest_match_score(poi: PointOfInterestResponse, interests: list[str]) -> float:
     if not interests:
         return 0
+    normalized_interests = sorted(set(interests))
+    if not normalized_interests:
+        return 0
+    return round(
+        sum(
+            _single_interest_match_score(poi=poi, interest=interest)
+            for interest in normalized_interests
+        )
+        / len(normalized_interests),
+        4,
+    )
+
+
+def _single_interest_match_score(
+    *,
+    poi: PointOfInterestResponse,
+    interest: str,
+) -> float:
+    normalized_interest = interest.strip().lower()
     poi_terms = _poi_terms(poi)
-    direct_matches = len(set(interests).intersection(poi_terms))
-    category_bonus = 1 if poi.category in interests else 0
-    return min(1.0, (direct_matches + category_bonus) / max(1, len(set(interests))))
+
+    if normalized_interest == "shopping" and poi.subcategory in MARKET_SUBCATEGORIES:
+        return 0.0
+
+    subcategory_weight = INTEREST_SUBCATEGORY_WEIGHTS.get(
+        normalized_interest,
+        {},
+    ).get(poi.subcategory)
+    if subcategory_weight is not None and (
+        normalized_interest in poi_terms or poi.category == normalized_interest
+    ):
+        return subcategory_weight
+
+    if normalized_interest in poi_terms:
+        return 1.0
+    if poi.category == normalized_interest:
+        return 0.85
+    return 0.0
+
+
+def _topic_priority_score(poi: PointOfInterestResponse, interests: list[str]) -> float:
+    if not interests:
+        return 0.0
+    return max(
+        (
+            _single_interest_match_score(poi=poi, interest=interest)
+            for interest in interests
+        ),
+        default=0.0,
+    )
+
+
+def _matches_intent_categories(
+    *,
+    poi: PointOfInterestResponse,
+    intent_categories: list[str],
+) -> bool:
+    if not intent_categories:
+        return True
+    return poi.category in set(intent_categories)
 
 
 def _budget_match_score(poi: PointOfInterestResponse, trip_request: TripRequestResponse) -> float:

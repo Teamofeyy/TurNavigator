@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, status
 
 from app.schemas.poi import PointOfInterestResponse
-from app.services.seed_loader import get_poi
+from app.services.catalog_service import get_poi
 
 router = APIRouter(tags=["points-of-interest"])
 

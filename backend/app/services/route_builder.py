@@ -116,10 +116,15 @@ def _nearest_neighbor_order(
     city: CityResponse,
     pois: list[PointOfInterestResponse],
 ) -> list[PointOfInterestResponse]:
-    remaining = list(pois)
-    ordered: list[PointOfInterestResponse] = []
-    current_lat = city.latitude
-    current_lon = city.longitude
+    if not pois:
+        return []
+
+    # The incoming order is recommendation order. Keep the strongest recommendation
+    # first, then reduce walking distance for the rest of the route.
+    ordered: list[PointOfInterestResponse] = [pois[0]]
+    remaining = list(pois[1:])
+    current_lat = pois[0].latitude
+    current_lon = pois[0].longitude
     while remaining:
         nearest = min(
             remaining,

@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 
 from app.api.routes.cities import router as cities_router
+from app.api.routes.feedback import router as feedback_router
 from app.api.routes.health import router as health_router
 from app.api.routes.planning import router as planning_router
 from app.api.routes.pois import router as pois_router
@@ -26,6 +27,10 @@ OPENAPI_TAGS = [
     {
         "name": "routes",
         "description": "Route building and route plan retrieval.",
+    },
+    {
+        "name": "feedback",
+        "description": "User route evaluation and in-memory decision log entries.",
     },
 ]
 
@@ -64,6 +69,7 @@ def create_app() -> FastAPI:
     app.include_router(pois_router)
     app.include_router(planning_router)
     app.include_router(routes_router)
+    app.include_router(feedback_router)
     return app
 
 
