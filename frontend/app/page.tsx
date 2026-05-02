@@ -1,26 +1,21 @@
-import { PlannerApp } from "@/components/planner-app";
-import { listCities } from "@/lib/travel-context-api";
+import { TravelContextApp } from '@/components/travel-context-app'
+import { requestBackend } from '@/lib/backend-api'
+import type { City } from '@/lib/types'
 
-export const dynamic = "force-dynamic";
-
-async function loadInitialCities() {
+async function getInitialCities(): Promise<City[]> {
   try {
-    return {
-      cities: await listCities(),
-      loadError: null,
-    };
-  } catch (error) {
-    return {
-      cities: [],
-      loadError:
-        error instanceof Error
-          ? error.message
-          : "Не удалось загрузить список городов.",
-    };
+    const response = await requestBackend('/cities')
+    if (!response.ok) {
+      return []
+    }
+    return response.json()
+  } catch {
+    return []
   }
 }
 
-export default async function Home() {
-  const { cities, loadError } = await loadInitialCities();
-  return <PlannerApp initialCities={cities} loadError={loadError} />;
+export default async function Page() {
+  const cities = await getInitialCities()
+
+  return <TravelContextApp initialCities={cities} />
 }

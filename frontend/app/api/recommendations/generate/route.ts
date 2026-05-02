@@ -1,15 +1,15 @@
-import { NextRequest } from "next/server";
+import { NextRequest } from 'next/server'
 
-import { forwardBackendJson } from "@/lib/backend-proxy";
+import { forwardBackendJson } from '@/lib/backend-proxy'
 
 export async function POST(request: NextRequest) {
-  const body = await request.text();
+  const body = await request.text()
 
-  return forwardBackendJson("/recommendations/generate", {
-    method: "POST",
+  return forwardBackendJson('/recommendations/generate', {
+    method: 'POST',
     body,
     headers: {
-      "content-type": "application/json",
+      'content-type': 'application/json',
     },
-  });
+  })
 }
