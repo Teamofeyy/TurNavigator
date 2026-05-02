@@ -1,58 +1,34 @@
 from datetime import datetime
-from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from app.schemas.poi import PointOfInterestResponse
-
-BudgetLevel = Literal["low", "medium", "high"]
-Pace = Literal["relaxed", "moderate", "intensive"]
-Transport = Literal["walking", "public_transport", "car", "mixed"]
-ExplanationLevel = Literal["short", "detailed"]
+from app.schemas.profile import UserProfileCreate, UserProfileResponse
 
 
-class UserProfileInput(BaseModel):
-    interests: list[str] = Field(
-        min_length=1,
-        description="User interests used for personalization.",
-        examples=[["culture", "food", "history"]],
-    )
-    budget_level: BudgetLevel = Field(
-        default="medium",
-        description="Qualitative user budget level.",
-        examples=["medium"],
-    )
-    max_budget: int = Field(
-        ge=0,
-        description="Maximum available trip budget in Russian rubles.",
-        examples=[15000],
-    )
-    pace: Pace = Field(
-        default="moderate",
-        description="Preferred trip pace.",
-        examples=["moderate"],
-    )
-    max_walking_distance_km: float = Field(
-        default=8,
-        ge=0,
-        description="Maximum preferred walking distance per day.",
-        examples=[8],
-    )
-    preferred_transport: Transport = Field(
-        default="walking",
-        description="Preferred transport mode.",
-        examples=["walking"],
-    )
-    explanation_level: ExplanationLevel = Field(
-        default="detailed",
-        description="Preferred level of recommendation explanation.",
-        examples=["detailed"],
-    )
+class TripLocationInput(BaseModel):
+    address: str = Field(description="Human-readable location address.", examples=["ул. Большая Садовая, 121"])
+    latitude: float = Field(description="Location latitude.", examples=[47.2269])
+    longitude: float = Field(description="Location longitude.", examples=[39.7139])
+    name: str | None = Field(default=None, description="Optional location label.", examples=["Отель"])
+    poi_id: int | None = Field(default=None, description="Optional accommodation POI id.", examples=[6012])
+
+
+class TripLocationResponse(TripLocationInput):
+    pass
 
 
 class TripRequestCreate(BaseModel):
     city_id: int = Field(description="City id for trip planning.", examples=[6])
-    profile: UserProfileInput
+    profile_id: int | None = Field(
+        default=None,
+        description="Existing saved profile id to reuse for this trip.",
+        examples=[1],
+    )
+    profile: UserProfileCreate | None = Field(
+        default=None,
+        description="Inline profile to persist and attach to the trip request.",
+    )
     days_count: int = Field(
         default=1,
         ge=1,
@@ -77,10 +53,41 @@ class TripRequestCreate(BaseModel):
         description="Additional planning constraints for future extensions.",
         examples=[{"avoid_expensive": True}],
     )
+    start_location: TripLocationInput | None = Field(
+        default=None,
+        description="Preferred start point such as a selected hotel.",
+    )
+    end_location: TripLocationInput | None = Field(
+        default=None,
+        description="Preferred end point. If omitted, the route may return to the start location.",
+    )
+
+    @model_validator(mode="after")
+    def validate_profile_source(self) -> "TripRequestCreate":
+        has_profile = self.profile is not None
+        has_profile_id = self.profile_id is not None
+        if has_profile == has_profile_id:
+            raise ValueError("Provide exactly one of profile or profile_id.")
+        return self
 
 
-class TripRequestResponse(TripRequestCreate):
+class TripRequestResponse(BaseModel):
     id: int = Field(description="Created trip request id.", examples=[1])
+    city_id: int = Field(description="City id for trip planning.", examples=[6])
+    profile_id: int = Field(description="Persisted user profile id.", examples=[1])
+    profile: UserProfileResponse
+    days_count: int = Field(description="Trip duration in days.", examples=[2])
+    daily_time_limit_hours: int = Field(description="Available planning time per day.", examples=[8])
+    selected_interests: list[str] | None = Field(
+        default=None,
+        description="Interests selected for this trip.",
+    )
+    constraints: dict[str, str | int | float | bool] = Field(
+        default_factory=dict,
+        description="Trip-level constraints snapshot.",
+    )
+    start_location: TripLocationResponse | None = Field(default=None, description="Trip start point.")
+    end_location: TripLocationResponse | None = Field(default=None, description="Trip end point.")
     created_at: datetime = Field(description="Creation timestamp.")
 
 
@@ -145,6 +152,7 @@ class RecommendationResponse(BaseModel):
 
 
 class RecommendationListResponse(BaseModel):
+    recommendation_run_id: int = Field(description="Persisted recommendation run id.", examples=[1])
     trip_request_id: int = Field(description="Trip request id.", examples=[1])
     city_id: int = Field(description="City id.", examples=[6])
     total_candidates: int = Field(description="Number of candidate POIs before limiting.", examples=[7])

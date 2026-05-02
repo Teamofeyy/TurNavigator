@@ -1,4 +1,4 @@
 from app.db.base import Base
-from app.db.session import SessionLocal, engine, get_db_session
+from app.db.session import SessionLocal, configure_database, engine, get_db_session, get_engine
 
-__all__ = ["Base", "SessionLocal", "engine", "get_db_session"]
+__all__ = ["Base", "SessionLocal", "configure_database", "engine", "get_db_session", "get_engine"]

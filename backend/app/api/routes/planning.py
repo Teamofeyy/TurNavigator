@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException, status
 
+from app.services.decision_log_store import record_decision_event
 from app.schemas.planning import (
     RecommendationGenerateRequest,
     RecommendationListResponse,
@@ -7,6 +8,8 @@ from app.schemas.planning import (
     TripRequestResponse,
 )
 from app.services.catalog_service import get_city
+from app.services.planning_serialization import to_json
+from app.services.recommendation_store import save_recommendation_run
 from app.services.recommender import generate_recommendations
 from app.services.trip_store import create_trip_request, get_trip_request
 
@@ -19,9 +22,9 @@ router = APIRouter(tags=["planning"])
     status_code=status.HTTP_201_CREATED,
     summary="Create trip planning request",
     description=(
-        "Creates an in-memory trip planning request from city, user profile, "
+        "Creates a persisted trip planning request from city, reusable user profile, "
         "trip duration, and resource constraints. The generated id can be used "
-        "to request recommendations."
+        "to request recommendations and routes."
     ),
     response_description="Created trip request.",
     responses={
@@ -43,7 +46,22 @@ async def create_trip_request_endpoint(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="City not found",
         )
-    return create_trip_request(payload)
+    try:
+        trip_request = create_trip_request(payload)
+    except LookupError as error:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(error),
+        ) from error
+
+    record_decision_event(
+        event_type="trip_request_created",
+        city_id=trip_request.city_id,
+        trip_request_id=trip_request.id,
+        input_context=to_json(payload),
+        profile_snapshot=to_json(trip_request.profile),
+    )
+    return trip_request
 
 
 @router.post(
@@ -101,9 +119,22 @@ async def generate_recommendations_endpoint(
         include_categories=payload.include_categories,
         exclude_categories=payload.exclude_categories,
     )
-    return RecommendationListResponse(
-        trip_request_id=trip_request.id,
-        city_id=trip_request.city_id,
-        total_candidates=total_candidates,
+    recommendation_run = save_recommendation_run(
+        trip_request=trip_request,
+        payload=payload,
         recommendations=recommendations,
+        total_candidates=total_candidates,
     )
+    record_decision_event(
+        event_type="recommendations_generated",
+        city_id=trip_request.city_id,
+        trip_request_id=trip_request.id,
+        recommendation_run_id=recommendation_run.recommendation_run_id,
+        input_context=to_json(payload),
+        profile_snapshot=to_json(trip_request.profile),
+        recommendations_snapshot=to_json(recommendation_run.recommendations),
+        explanation_snapshot={
+            "recommendation_count": len(recommendation_run.recommendations),
+        },
+    )
+    return recommendation_run

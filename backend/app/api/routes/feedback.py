@@ -14,7 +14,7 @@ router = APIRouter(tags=["feedback"])
     summary="Save route feedback",
     description=(
         "Stores a user evaluation for a previously built route. The feedback entry "
-        "is also written into the in-memory decision log for MVP experiments."
+        "is also written into the persistent decision log together with route snapshots."
     ),
     response_description="Saved feedback entry.",
     responses={
@@ -43,9 +43,8 @@ async def create_feedback_endpoint(payload: FeedbackCreate) -> FeedbackResponse:
     response_model=list[DecisionLogResponse],
     summary="List decision log entries",
     description=(
-        "Returns recent feedback and decision log entries created during the MVP "
-        "session. This is useful for experiments and demonstration of explainable "
-        "planning history."
+        "Returns recent feedback and decision log entries persisted during planning. "
+        "This is useful for experiments and demonstration of explainable planning history."
     ),
     response_description="Recent decision log entries.",
 )

@@ -2,6 +2,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from app.schemas.planning import TripLocationInput, TripLocationResponse
 from app.schemas.poi import PointOfInterestResponse
 
 RouteStatus = Literal["built", "partially_built", "empty"]
@@ -36,6 +37,14 @@ class RouteBuildRequest(BaseModel):
         default=True,
         description="Skip POIs that would exceed time or budget constraints when possible.",
         examples=[True],
+    )
+    start_location: TripLocationInput | None = Field(
+        default=None,
+        description="Optional explicit route start point, for example the user's hotel.",
+    )
+    end_location: TripLocationInput | None = Field(
+        default=None,
+        description="Optional explicit route end point. If omitted, the builder may return to start.",
     )
 
 
@@ -127,6 +136,24 @@ class RoutePlanResponse(BaseModel):
     within_budget: bool = Field(
         description="Whether the route fits the profile budget.",
         examples=[True],
+    )
+    start_location: TripLocationResponse | None = Field(
+        default=None,
+        description="Resolved route start point.",
+    )
+    end_location: TripLocationResponse | None = Field(
+        default=None,
+        description="Resolved route end point.",
+    )
+    return_leg_distance_km: float = Field(
+        ge=0,
+        description="Distance of the final return leg to the end point.",
+        examples=[2.4],
+    )
+    return_leg_travel_minutes: int = Field(
+        ge=0,
+        description="Travel time of the final return leg.",
+        examples=[28],
     )
     skipped_poi_ids: list[int] = Field(
         description="POI ids skipped because of route constraints.",

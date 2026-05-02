@@ -1,5 +1,6 @@
 from math import asin, ceil, cos, radians, sin, sqrt
 
+from app.schemas.planning import TripLocationResponse
 from app.schemas.city import CityResponse
 from app.schemas.planning import TripRequestResponse
 from app.schemas.poi import PointOfInterestResponse
@@ -19,13 +20,21 @@ def build_route_plan(
     pois: list[PointOfInterestResponse],
     optimize_order: bool,
     strict_constraints: bool,
+    start_location: TripLocationResponse | None = None,
+    end_location: TripLocationResponse | None = None,
 ) -> RoutePlanResponse:
-    ordered_pois = _nearest_neighbor_order(city=city, pois=pois) if optimize_order else pois
+    resolved_start = start_location or _city_center_location(city)
+    resolved_end = end_location or resolved_start
+    ordered_pois = (
+        _nearest_neighbor_order(start_location=resolved_start, pois=pois)
+        if optimize_order
+        else pois
+    )
 
     route_points: list[RoutePointResponse] = []
     skipped_poi_ids: list[int] = []
-    current_lat = city.latitude
-    current_lon = city.longitude
+    current_lat = resolved_start.latitude
+    current_lon = resolved_start.longitude
     total_distance_km = 0.0
     total_travel_minutes = 0
     total_visit_minutes = 0
@@ -79,6 +88,22 @@ def build_route_plan(
             )
         )
 
+    return_leg_distance_km = 0.0
+    return_leg_travel_minutes = 0
+    if route_points:
+        return_leg_distance_km = _distance_km(
+            current_lat,
+            current_lon,
+            resolved_end.latitude,
+            resolved_end.longitude,
+        )
+        return_leg_travel_minutes = _travel_minutes(
+            distance_km=return_leg_distance_km,
+            transport=trip_request.profile.preferred_transport,
+        )
+        total_distance_km += return_leg_distance_km
+        total_travel_minutes += return_leg_travel_minutes
+
     total_time_minutes = total_travel_minutes + total_visit_minutes
     within_time_limit = total_time_minutes <= total_time_limit
     within_budget = total_budget <= trip_request.profile.max_budget
@@ -98,6 +123,10 @@ def build_route_plan(
         daily_time_limit_minutes=trip_request.daily_time_limit_hours * 60,
         within_time_limit=within_time_limit,
         within_budget=within_budget,
+        start_location=resolved_start,
+        end_location=resolved_end,
+        return_leg_distance_km=round(return_leg_distance_km, 2),
+        return_leg_travel_minutes=return_leg_travel_minutes,
         skipped_poi_ids=skipped_poi_ids,
         route_points=route_points,
         explanation_summary=_explain_route(
@@ -108,23 +137,24 @@ def build_route_plan(
             total_budget=total_budget,
             within_time_limit=within_time_limit,
             within_budget=within_budget,
+            start_location=resolved_start,
+            end_location=resolved_end,
+            return_leg_distance_km=return_leg_distance_km,
         ),
     )
 
 
 def _nearest_neighbor_order(
-    city: CityResponse,
+    start_location: TripLocationResponse,
     pois: list[PointOfInterestResponse],
 ) -> list[PointOfInterestResponse]:
     if not pois:
         return []
 
-    # The incoming order is recommendation order. Keep the strongest recommendation
-    # first, then reduce walking distance for the rest of the route.
-    ordered: list[PointOfInterestResponse] = [pois[0]]
-    remaining = list(pois[1:])
-    current_lat = pois[0].latitude
-    current_lon = pois[0].longitude
+    ordered: list[PointOfInterestResponse] = []
+    remaining = list(pois)
+    current_lat = start_location.latitude
+    current_lon = start_location.longitude
     while remaining:
         nearest = min(
             remaining,
@@ -163,21 +193,38 @@ def _explain_route(
     total_budget: int,
     within_time_limit: bool,
     within_budget: bool,
+    start_location: TripLocationResponse,
+    end_location: TripLocationResponse,
+    return_leg_distance_km: float,
 ) -> str:
     if not route_points:
         return "Маршрут не построен: все кандидаты превысили ограничения по времени или бюджету."
 
     parts = [
+        f"старт {start_location.name or start_location.address}",
+        f"финиш {end_location.name or end_location.address}",
         f"маршрут включает {len(route_points)} точек",
         f"примерная дистанция {round(total_distance_km, 2)} км",
         f"общее время {total_time_minutes} мин.",
         f"ориентировочный бюджет {total_budget} руб.",
     ]
+    if return_leg_distance_km > 0:
+        parts.append(f"возврат до финальной точки {round(return_leg_distance_km, 2)} км")
     parts.append("вписывается во временное ограничение" if within_time_limit else "превышает временное ограничение")
     parts.append("вписывается в бюджет" if within_budget else "превышает бюджет")
     if skipped_poi_ids:
         parts.append(f"часть объектов пропущена из-за ограничений: {', '.join(map(str, skipped_poi_ids))}")
     return "Модуль построения маршрута сформировал маршрут: " + "; ".join(parts) + "."
+
+
+def _city_center_location(city: CityResponse) -> TripLocationResponse:
+    return TripLocationResponse(
+        name=f"Центр {city.name}",
+        address=f"Центр города {city.name}",
+        latitude=city.latitude,
+        longitude=city.longitude,
+        poi_id=None,
+    )
 
 
 def _distance_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
