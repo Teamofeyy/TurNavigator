@@ -4,7 +4,7 @@ from sqlalchemy import select
 
 from app.db.session import SessionLocal
 from app.models import UserProfile
-from app.schemas.profile import UserProfileCreate, UserProfileResponse
+from app.schemas.profile import UserProfileCreate, UserProfileResponse, UserProfileUpdate
 from app.services.planning_serialization import profile_model_to_response
 
 
@@ -36,8 +36,23 @@ def list_profiles(limit: int = 20) -> list[UserProfileResponse]:
     with SessionLocal() as session:
         statement = (
             select(UserProfile)
-            .order_by(UserProfile.created_at.desc())
+            .order_by(UserProfile.updated_at.desc(), UserProfile.created_at.desc())
             .limit(limit)
         )
         profiles = session.scalars(statement).all()
         return [profile_model_to_response(profile) for profile in profiles]
+
+
+def update_profile(profile_id: int, payload: UserProfileUpdate) -> UserProfileResponse | None:
+    with SessionLocal() as session:
+        profile = session.get(UserProfile, profile_id)
+        if profile is None:
+            return None
+
+        for field_name, value in payload.model_dump(exclude_unset=True).items():
+            setattr(profile, field_name, value)
+
+        session.add(profile)
+        session.commit()
+        session.refresh(profile)
+        return profile_model_to_response(profile)

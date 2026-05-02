@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Query, status
 
-from app.schemas.profile import UserProfileCreate, UserProfileResponse
-from app.services.profile_store import create_profile, get_profile, list_profiles
+from app.schemas.profile import UserProfileCreate, UserProfileResponse, UserProfileUpdate
+from app.services.profile_store import create_profile, get_profile, list_profiles, update_profile
 
 router = APIRouter(tags=["profiles"])
 
@@ -58,6 +58,39 @@ async def list_profiles_endpoint(
 )
 async def get_profile_endpoint(profile_id: int) -> UserProfileResponse:
     profile = get_profile(profile_id)
+    if profile is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Profile not found",
+        )
+    return profile
+
+
+@router.patch(
+    "/profiles/{profile_id}",
+    response_model=UserProfileResponse,
+    summary="Update saved profile",
+    description=(
+        "Updates one reusable MVP profile. The endpoint is intended for demo flows "
+        "without a full user account system."
+    ),
+    response_description="Updated profile.",
+    responses={
+        404: {
+            "description": "Profile was not found.",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Profile not found"},
+                },
+            },
+        },
+    },
+)
+async def update_profile_endpoint(
+    profile_id: int,
+    payload: UserProfileUpdate,
+) -> UserProfileResponse:
+    profile = update_profile(profile_id, payload)
     if profile is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

@@ -12,6 +12,7 @@ def test_api_planning_flow(client):
     profile_response = client.post(
         "/profiles",
         json={
+            "profile_name": "Demo planning profile",
             "interests": ["history", "food", "culture"],
             "budget_level": "medium",
             "max_budget": 15000,
@@ -30,6 +31,24 @@ def test_api_planning_flow(client):
     )
     assert profile_response.status_code == 201
     profile = profile_response.json()
+    assert profile["profile_name"] == "Demo planning profile"
+
+    profiles_response = client.get("/profiles", params={"limit": 10})
+    assert profiles_response.status_code == 200
+    profiles = profiles_response.json()
+    assert any(item["id"] == profile["id"] for item in profiles)
+
+    patch_response = client.patch(
+        f"/profiles/{profile['id']}",
+        json={
+            "profile_name": "Updated demo planning profile",
+            "trust_level": "high",
+        },
+    )
+    assert patch_response.status_code == 200
+    updated_profile = patch_response.json()
+    assert updated_profile["profile_name"] == "Updated demo planning profile"
+    assert updated_profile["trust_level"] == "high"
 
     hotels_response = client.get(
         f"/cities/{city_id}/pois",
@@ -50,7 +69,7 @@ def test_api_planning_flow(client):
         "/trip-requests",
         json={
             "city_id": city_id,
-            "profile_id": profile["id"],
+            "profile_id": updated_profile["id"],
             "days_count": 2,
             "daily_time_limit_hours": 8,
             "selected_interests": ["history", "food", "culture"],

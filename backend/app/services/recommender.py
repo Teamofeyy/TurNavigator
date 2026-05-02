@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
 from math import asin, cos, radians, sin, sqrt
 
 from app.schemas.city import CityResponse
@@ -79,6 +82,131 @@ INTEREST_SUBCATEGORY_WEIGHTS: dict[str, dict[str, float]] = {
     },
 }
 
+COMPROMISE_STRATEGY_WEIGHTS: dict[str, dict[str, float]] = {
+    "balanced": {
+        "interest_match": 0.35,
+        "budget_match": 0.20,
+        "route_convenience": 0.15,
+        "pace_match": 0.15,
+        "popularity_score": 0.10,
+        "data_quality_score": 0.05,
+    },
+    "budget_first": {
+        "interest_match": 0.28,
+        "budget_match": 0.30,
+        "route_convenience": 0.14,
+        "pace_match": 0.12,
+        "popularity_score": 0.09,
+        "data_quality_score": 0.07,
+    },
+    "time_first": {
+        "interest_match": 0.26,
+        "budget_match": 0.14,
+        "route_convenience": 0.24,
+        "pace_match": 0.22,
+        "popularity_score": 0.08,
+        "data_quality_score": 0.06,
+    },
+    "experience_first": {
+        "interest_match": 0.24,
+        "budget_match": 0.10,
+        "route_convenience": 0.10,
+        "pace_match": 0.12,
+        "popularity_score": 0.24,
+        "data_quality_score": 0.20,
+    },
+}
+
+TRUST_LEVEL_WEIGHT_DELTAS: dict[str, dict[str, float]] = {
+    "low": {
+        "interest_match": 0.05,
+        "budget_match": 0.03,
+        "popularity_score": -0.05,
+        "data_quality_score": -0.03,
+    },
+    "medium": {},
+    "high": {
+        "interest_match": -0.06,
+        "budget_match": -0.03,
+        "popularity_score": 0.05,
+        "data_quality_score": 0.04,
+    },
+}
+
+GOAL_CATEGORY_HINTS: dict[str, list[str]] = {
+    "discover_local_culture": ["culture", "history", "architecture"],
+    "photo_spots": ["architecture", "nature", "history", "culture"],
+}
+
+TIME_WINDOW_CATEGORY_FIT: dict[str, dict[str, float]] = {
+    "morning": {
+        "food": 0.95,
+        "nature": 0.85,
+        "history": 0.8,
+        "culture": 0.75,
+        "shopping": 0.55,
+        "nightlife": 0.05,
+    },
+    "afternoon": {
+        "culture": 0.9,
+        "history": 0.88,
+        "shopping": 0.82,
+        "architecture": 0.8,
+        "food": 0.7,
+        "nightlife": 0.15,
+    },
+    "evening": {
+        "nightlife": 1.0,
+        "food": 0.92,
+        "entertainment": 0.9,
+        "architecture": 0.72,
+        "culture": 0.55,
+        "history": 0.5,
+    },
+}
+
+PHOTO_SPOT_KEYWORDS = {
+    "view",
+    "panorama",
+    "lookout",
+    "observation",
+    "riverfront",
+    "embankment",
+    "набереж",
+    "панорам",
+    "вид",
+    "смотров",
+}
+
+QUIET_CATEGORIES = {"nature", "culture", "history", "architecture"}
+LOUD_CATEGORIES = {"nightlife", "entertainment", "shopping"}
+FAMILY_FRIENDLY_CATEGORIES = {"nature", "culture", "food", "history"}
+STAIRS_KEYWORDS = {"stairs", "steps", "stair", "лестниц", "ступен"}
+ACCESSIBLE_KEYWORDS = {"wheelchair", "accessible", "access", "безбарьер", "доступ"}
+
+COMPROMISE_LABELS = {
+    "balanced": "баланс интересов, времени и бюджета",
+    "budget_first": "приоритет бюджета",
+    "time_first": "приоритет времени и компактности",
+    "experience_first": "приоритет впечатлений",
+}
+
+TRUST_LABELS = {
+    "low": "низкий",
+    "medium": "средний",
+    "high": "высокий",
+}
+
+
+@dataclass(frozen=True)
+class AdvancedProfileSignals:
+    goal_alignment: float
+    must_have_alignment: float
+    avoid_penalty: float
+    accessibility_fit: float | None
+    time_window_fit: float | None
+    exploration_fit: float
+
 
 def generate_recommendations(
     trip_request: TripRequestResponse,
@@ -127,6 +255,17 @@ def _rank_recommendations(
     intent_categories: list[str],
 ) -> list[RecommendationResponse]:
     interests = _trip_interests(trip_request)
+    fully_sorted = _sort_recommendations(scored, interests=interests)
+
+    if trip_request.profile.compromise_strategy == "experience_first" or trip_request.profile.trust_level == "high":
+        return fully_sorted
+
+    if _allows_goal_driven_interleaving(trip_request) and len(intent_categories) > 1:
+        return _interleave_by_category(
+            fully_sorted,
+            category_order=intent_categories,
+        )
+
     relevant = [item for item in scored if item.factors.interest_match > 0]
     fallback = [item for item in scored if item.factors.interest_match <= 0]
     if len(intent_categories) > 1:
@@ -141,6 +280,10 @@ def _rank_recommendations(
         *_sort_recommendations(relevant, interests=interests),
         *_sort_recommendations(fallback, interests=interests),
     ]
+
+
+def _allows_goal_driven_interleaving(trip_request: TripRequestResponse) -> bool:
+    return bool(trip_request.profile.goals) and trip_request.profile.trust_level != "low"
 
 
 def _interleave_by_category(
@@ -198,13 +341,20 @@ def _score_poi(
         popularity_score=poi.popularity_score,
         data_quality_score=poi.data_quality_score,
     )
+    advanced_signals = _advanced_profile_signals(
+        poi=poi,
+        trip_request=trip_request,
+        matched_interests=matched_interests,
+        factors=factors,
+    )
     score = round(
-        (0.35 * factors.interest_match)
-        + (0.20 * factors.budget_match)
-        + (0.15 * factors.route_convenience)
-        + (0.15 * factors.pace_match)
-        + (0.10 * factors.popularity_score)
-        + (0.05 * factors.data_quality_score),
+        _clamp(
+            _weighted_base_score(factors=factors, trip_request=trip_request)
+            + _advanced_profile_adjustment(
+                trip_request=trip_request,
+                signals=advanced_signals,
+            )
+        ),
         4,
     )
     constraint_status = _constraint_status(poi=poi, city=city, trip_request=trip_request)
@@ -223,6 +373,7 @@ def _score_poi(
             matched_interests=matched_interests,
             factors=factors,
             constraint_status=constraint_status,
+            signals=advanced_signals,
         ),
         poi=poi,
     )
@@ -240,6 +391,12 @@ def _intent_categories(trip_request: TripRequestResponse) -> list[str]:
             continue
         seen.add(interest)
         categories.append(interest)
+    for goal in _normalize_list(trip_request.profile.goals):
+        for category in GOAL_CATEGORY_HINTS.get(goal, []):
+            if category in seen:
+                continue
+            seen.add(category)
+            categories.append(category)
     return categories
 
 
@@ -338,7 +495,13 @@ def _route_convenience_score(
     city: CityResponse,
     trip_request: TripRequestResponse,
 ) -> float:
-    distance_km = _distance_km(city.latitude, city.longitude, poi.latitude, poi.longitude)
+    anchor_lat = city.latitude
+    anchor_lon = city.longitude
+    if trip_request.start_location is not None:
+        anchor_lat = trip_request.start_location.latitude
+        anchor_lon = trip_request.start_location.longitude
+
+    distance_km = _distance_km(anchor_lat, anchor_lon, poi.latitude, poi.longitude)
     max_walk = max(1.0, trip_request.profile.max_walking_distance_km)
     if trip_request.profile.preferred_transport == "walking":
         return round(max(0.1, 1 - (distance_km / max_walk)), 4)
@@ -356,6 +519,231 @@ def _pace_match_score(poi: PointOfInterestResponse, trip_request: TripRequestRes
     return round(max(0.2, 1 - (distance_from_range / 180)), 4)
 
 
+def _weighted_base_score(
+    *,
+    factors: RecommendationFactors,
+    trip_request: TripRequestResponse,
+) -> float:
+    weights = _strategy_weights(trip_request)
+    factor_values = factors.model_dump()
+    return sum(weights[name] * factor_values[name] for name in weights)
+
+
+def _strategy_weights(trip_request: TripRequestResponse) -> dict[str, float]:
+    weights = dict(
+        COMPROMISE_STRATEGY_WEIGHTS.get(
+            trip_request.profile.compromise_strategy,
+            COMPROMISE_STRATEGY_WEIGHTS["balanced"],
+        )
+    )
+    for name, delta in TRUST_LEVEL_WEIGHT_DELTAS.get(trip_request.profile.trust_level, {}).items():
+        weights[name] = max(0.01, weights[name] + delta)
+    total = sum(weights.values())
+    return {name: value / total for name, value in weights.items()}
+
+
+def _advanced_profile_signals(
+    *,
+    poi: PointOfInterestResponse,
+    trip_request: TripRequestResponse,
+    matched_interests: list[str],
+    factors: RecommendationFactors,
+) -> AdvancedProfileSignals:
+    return AdvancedProfileSignals(
+        goal_alignment=_goal_alignment_score(
+            poi=poi,
+            trip_request=trip_request,
+            factors=factors,
+        ),
+        must_have_alignment=_keyword_alignment_score(
+            poi=poi,
+            keywords=trip_request.profile.must_have,
+        ),
+        avoid_penalty=_keyword_alignment_score(
+            poi=poi,
+            keywords=trip_request.profile.avoid,
+        ),
+        accessibility_fit=_accessibility_fit_score(
+            poi=poi,
+            trip_request=trip_request,
+        ),
+        time_window_fit=_time_window_fit_score(
+            poi=poi,
+            trip_request=trip_request,
+        ),
+        exploration_fit=_exploration_fit_score(
+            poi=poi,
+            trip_request=trip_request,
+            matched_interests=matched_interests,
+        ),
+    )
+
+
+def _goal_alignment_score(
+    *,
+    poi: PointOfInterestResponse,
+    trip_request: TripRequestResponse,
+    factors: RecommendationFactors,
+) -> float:
+    goals = _normalize_list(trip_request.profile.goals)
+    if not goals:
+        return 0.0
+
+    blob = _poi_blob(poi)
+    scores: list[float] = []
+    selected_interests = set(_trip_interests(trip_request))
+    for goal in goals:
+        if goal == "discover_local_culture":
+            scores.append(1.0 if poi.category in {"culture", "history", "architecture"} else 0.15)
+        elif goal == "optimize_budget":
+            scores.append(factors.budget_match)
+        elif goal == "minimize_transfers":
+            scores.append(factors.route_convenience)
+        elif goal == "maximize_variety":
+            if poi.category not in selected_interests and len(set(poi.interests)) >= 2:
+                scores.append(1.0)
+            elif poi.category not in selected_interests:
+                scores.append(0.8)
+            else:
+                scores.append(0.35)
+        elif goal == "photo_spots":
+            photo_score = 1.0 if poi.category in {"architecture", "nature", "history", "culture"} else 0.25
+            if any(keyword in blob for keyword in PHOTO_SPOT_KEYWORDS):
+                photo_score = max(photo_score, 1.0)
+            scores.append(photo_score)
+        else:
+            scores.append(0.0)
+
+    return round(sum(scores) / len(scores), 4)
+
+
+def _keyword_alignment_score(
+    *,
+    poi: PointOfInterestResponse,
+    keywords: list[str],
+) -> float:
+    normalized_keywords = _normalize_list(keywords)
+    if not normalized_keywords:
+        return 0.0
+
+    matches = [
+        1.0 if _poi_matches_phrase(poi=poi, phrase=keyword) else 0.0
+        for keyword in normalized_keywords
+    ]
+    return round(sum(matches) / len(matches), 4)
+
+
+def _accessibility_fit_score(
+    *,
+    poi: PointOfInterestResponse,
+    trip_request: TripRequestResponse,
+) -> float | None:
+    needs = _normalize_list(trip_request.profile.accessibility_needs)
+    if not needs:
+        return None
+
+    blob = _poi_blob(poi)
+    scores: list[float] = []
+    for need in needs:
+        if need == "wheelchair_access":
+            if any(keyword in blob for keyword in STAIRS_KEYWORDS):
+                scores.append(0.05)
+            elif any(keyword in blob for keyword in ACCESSIBLE_KEYWORDS):
+                scores.append(1.0)
+            elif poi.category in {"food", "culture", "shopping"}:
+                scores.append(0.7)
+            else:
+                scores.append(0.45)
+        elif need == "quiet_places":
+            if poi.category in QUIET_CATEGORIES:
+                scores.append(0.95)
+            elif poi.category in LOUD_CATEGORIES:
+                scores.append(0.1)
+            else:
+                scores.append(0.45)
+        elif need == "family_friendly":
+            scores.append(0.9 if poi.category in FAMILY_FRIENDLY_CATEGORIES else 0.25)
+        elif need == "rest_breaks":
+            if poi.category in {"food", "nature"} or poi.estimated_visit_minutes <= 75:
+                scores.append(0.9)
+            elif poi.estimated_visit_minutes >= 150:
+                scores.append(0.25)
+            else:
+                scores.append(0.55)
+        else:
+            scores.append(0.5)
+
+    return round(sum(scores) / len(scores), 4)
+
+
+def _time_window_fit_score(
+    *,
+    poi: PointOfInterestResponse,
+    trip_request: TripRequestResponse,
+) -> float | None:
+    windows = _normalize_list(trip_request.profile.preferred_time_windows)
+    if not windows:
+        return None
+
+    scores = [
+        TIME_WINDOW_CATEGORY_FIT.get(window, {}).get(poi.category, 0.4)
+        for window in windows
+    ]
+    return round(max(scores), 4)
+
+
+def _exploration_fit_score(
+    *,
+    poi: PointOfInterestResponse,
+    trip_request: TripRequestResponse,
+    matched_interests: list[str],
+) -> float:
+    if matched_interests:
+        return 0.0
+    if _goal_alignment_score(
+        poi=poi,
+        trip_request=trip_request,
+        factors=RecommendationFactors(
+            interest_match=0.0,
+            budget_match=0.0,
+            route_convenience=0.0,
+            pace_match=0.0,
+            popularity_score=poi.popularity_score,
+            data_quality_score=poi.data_quality_score,
+        ),
+    ) <= 0.5:
+        return 0.0
+    return 1.0 if poi.data_quality_score >= 0.7 or poi.popularity_score >= 0.7 else 0.5
+
+
+def _advanced_profile_adjustment(
+    *,
+    trip_request: TripRequestResponse,
+    signals: AdvancedProfileSignals,
+) -> float:
+    adjustment = (0.12 * signals.goal_alignment) + (0.14 * signals.must_have_alignment)
+    adjustment -= 0.25 * signals.avoid_penalty
+
+    if signals.accessibility_fit is not None:
+        adjustment += 0.12 * (signals.accessibility_fit - 0.5)
+    if signals.time_window_fit is not None:
+        adjustment += 0.06 * (signals.time_window_fit - 0.5)
+
+    if trip_request.profile.trust_level == "low":
+        adjustment -= 0.07 * signals.exploration_fit
+    elif trip_request.profile.trust_level == "high":
+        adjustment += 0.08 * signals.exploration_fit
+        adjustment += 0.05 * signals.goal_alignment
+
+    if trip_request.profile.compromise_strategy == "experience_first":
+        adjustment += 0.06 * signals.goal_alignment
+        adjustment += 0.05 * signals.exploration_fit
+    elif trip_request.profile.compromise_strategy == "budget_first":
+        adjustment -= 0.04 * signals.exploration_fit
+
+    return adjustment
+
+
 def _constraint_status(
     poi: PointOfInterestResponse,
     city: CityResponse,
@@ -367,7 +755,12 @@ def _constraint_status(
         else "over_budget"
     )
     pace_status = f"fits_{trip_request.profile.pace}_pace"
-    distance_km = _distance_km(city.latitude, city.longitude, poi.latitude, poi.longitude)
+    anchor_lat = city.latitude
+    anchor_lon = city.longitude
+    if trip_request.start_location is not None:
+        anchor_lat = trip_request.start_location.latitude
+        anchor_lon = trip_request.start_location.longitude
+    distance_km = _distance_km(anchor_lat, anchor_lon, poi.latitude, poi.longitude)
     distance_status = (
         "near_city_center"
         if distance_km <= trip_request.profile.max_walking_distance_km
@@ -386,26 +779,69 @@ def _build_explanation(
     matched_interests: list[str],
     factors: RecommendationFactors,
     constraint_status: ConstraintStatus,
+    signals: AdvancedProfileSignals,
 ) -> str:
     if trip_request.profile.explanation_level == "short":
+        short_parts = []
         if matched_interests:
-            return f"Объект «{poi.name}» подходит по интересам: {', '.join(matched_interests)}."
-        return f"Объект «{poi.name}» подходит по бюджету, темпу и расположению."
+            short_parts.append(f"совпадает с интересами: {', '.join(matched_interests)}")
+        if signals.must_have_alignment > 0:
+            short_parts.append("поддерживает must-have сценарии")
+        if signals.accessibility_fit is not None and signals.accessibility_fit >= 0.7:
+            short_parts.append("учитывает требования доступности")
+        if signals.time_window_fit is not None and signals.time_window_fit >= 0.7:
+            short_parts.append("хорошо ложится в предпочитаемое время дня")
+        if not short_parts:
+            short_parts.append("подходит по бюджету, темпу и расположению")
+        return f"Объект «{poi.name}» рекомендован, потому что " + "; ".join(short_parts) + "."
 
     parts = []
     if matched_interests:
         parts.append(f"совпадает с интересами: {', '.join(matched_interests)}")
     else:
         parts.append("добавляет разнообразие к маршруту")
+
+    if signals.goal_alignment > 0.55 and trip_request.profile.goals:
+        parts.append(
+            "поддерживает цели поездки: "
+            + ", ".join(_normalize_list(trip_request.profile.goals))
+        )
+    if signals.must_have_alignment > 0:
+        parts.append("совпадает с одним из must-have требований пользователя")
+    if signals.avoid_penalty > 0:
+        parts.append("частично конфликтует с avoid-ограничениями и поэтому получает штраф")
+
     if constraint_status.budget == "within_budget":
         parts.append(f"не превышает бюджет, ориентировочная стоимость {poi.average_cost_rub} руб.")
     else:
         parts.append(f"может выйти за бюджет, ориентировочная стоимость {poi.average_cost_rub} руб.")
+
     if constraint_status.distance == "near_city_center":
-        parts.append("удобно расположен относительно центра города")
+        parts.append("удобно расположен относительно точки старта")
     else:
-        parts.append("может потребовать транспорт")
-    parts.append(f"оценка полезности: {round(factors.interest_match, 2)} по интересам")
+        parts.append("может потребовать транспорт или более длинный переход")
+
+    if signals.accessibility_fit is not None:
+        if signals.accessibility_fit >= 0.7:
+            parts.append("хорошо поддерживает выбранные accessibility needs")
+        elif signals.accessibility_fit <= 0.3:
+            parts.append("может хуже подходить под выбранные accessibility needs")
+
+    if signals.time_window_fit is not None and signals.time_window_fit >= 0.7:
+        parts.append("категория хорошо вписывается в предпочитаемые окна времени")
+
+    parts.append(f"оценка совпадения по интересам {round(factors.interest_match, 2)}")
+    parts.append(
+        "стратегия компромиссов: "
+        + COMPROMISE_LABELS.get(
+            trip_request.profile.compromise_strategy,
+            COMPROMISE_LABELS["balanced"],
+        )
+    )
+    parts.append(
+        "уровень доверия системе: "
+        + TRUST_LABELS.get(trip_request.profile.trust_level, TRUST_LABELS["medium"])
+    )
     return f"Объект «{poi.name}» рекомендован, потому что " + "; ".join(parts) + "."
 
 
@@ -420,17 +856,64 @@ def _is_allowed_category(
 
 
 def _poi_terms(poi: PointOfInterestResponse) -> set[str]:
-    return set(_normalize_list([poi.category, poi.subcategory, *poi.interests]))
+    return set(
+        _normalize_list(
+            [
+                poi.category,
+                poi.subcategory,
+                *poi.interests,
+                *poi.osm_tags.keys(),
+                *poi.osm_tags.values(),
+            ]
+        )
+    )
+
+
+def _poi_blob(poi: PointOfInterestResponse) -> str:
+    parts = [
+        poi.name,
+        poi.category,
+        poi.subcategory,
+        poi.address,
+        poi.description,
+        *poi.interests,
+        *poi.osm_tags.keys(),
+        *poi.osm_tags.values(),
+    ]
+    return " ".join(_normalize_text(part) for part in parts if part.strip())
+
+
+def _poi_matches_phrase(*, poi: PointOfInterestResponse, phrase: str) -> bool:
+    normalized_phrase = _normalize_text(phrase)
+    if not normalized_phrase:
+        return False
+
+    blob = _poi_blob(poi)
+    if normalized_phrase in blob:
+        return True
+
+    words = [word for word in normalized_phrase.split() if word]
+    if not words:
+        return False
+    return all(word in blob for word in words)
 
 
 def _normalize_list(values: list[str]) -> list[str]:
     return [value.strip().lower() for value in values if value.strip()]
 
 
+def _normalize_text(value: str) -> str:
+    return value.strip().lower().replace("_", " ").replace("-", " ")
+
+
 def _normalize_optional_set(values: list[str] | None) -> set[str] | None:
     if values is None:
         return None
     return set(_normalize_list(values))
+
+
+def _clamp(value: float, minimum: float = 0.0, maximum: float = 1.0) -> float:
+    return max(minimum, min(maximum, value))
 
 
 def _distance_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:

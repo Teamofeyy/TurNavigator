@@ -17,6 +17,11 @@ class UserProfile(Base):
     __tablename__ = "user_profiles"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    profile_name: Mapped[str] = mapped_column(
+        String(120),
+        nullable=False,
+        default="Профиль путешественника",
+    )
     interests: Mapped[list[str]] = mapped_column(json_column_type(), nullable=False, default=list)
     budget_level: Mapped[str] = mapped_column(String(32), nullable=False, default="medium")
     max_budget: Mapped[int] = mapped_column(Integer, nullable=False, default=0)

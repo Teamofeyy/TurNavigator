@@ -31,6 +31,7 @@ def to_json(value: Any) -> Any:
 def profile_model_to_response(profile: UserProfile) -> UserProfileResponse:
     return UserProfileResponse(
         id=profile.id,
+        profile_name=profile.profile_name,
         interests=list(profile.interests),
         budget_level=profile.budget_level,
         max_budget=profile.max_budget,
