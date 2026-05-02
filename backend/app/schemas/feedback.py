@@ -1,3 +1,5 @@
+from typing import Any
+
 from datetime import datetime
 
 from pydantic import BaseModel, Field
@@ -48,5 +50,36 @@ class FeedbackResponse(BaseModel):
     created_at: datetime = Field(description="Feedback creation timestamp.")
 
 
-class DecisionLogResponse(FeedbackResponse):
-    pass
+class DecisionLogResponse(BaseModel):
+    id: int = Field(description="Decision log id.", examples=[1])
+    event_type: str = Field(description="Type of planning event.", examples=["route_built"])
+    city_id: int = Field(description="City id.", examples=[6])
+    trip_request_id: int | None = Field(default=None, description="Related trip request id.")
+    recommendation_run_id: int | None = Field(default=None, description="Related recommendation run id.")
+    route_id: int | None = Field(default=None, description="Related route id.")
+    feedback_id: int | None = Field(default=None, description="Related feedback id.")
+    input_context: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Request payload and context captured for the event.",
+    )
+    profile_snapshot: dict[str, Any] | None = Field(
+        default=None,
+        description="Expanded profile snapshot used in the decision.",
+    )
+    recommendations_snapshot: list[dict[str, Any]] | None = Field(
+        default=None,
+        description="Saved recommendation list snapshot if available.",
+    )
+    route_snapshot: dict[str, Any] | None = Field(
+        default=None,
+        description="Saved route snapshot if available.",
+    )
+    explanation_snapshot: dict[str, Any] | None = Field(
+        default=None,
+        description="Explanation fragments captured for auditing.",
+    )
+    feedback_snapshot: dict[str, Any] | None = Field(
+        default=None,
+        description="Saved feedback snapshot if available.",
+    )
+    created_at: datetime = Field(description="Decision log creation timestamp.")

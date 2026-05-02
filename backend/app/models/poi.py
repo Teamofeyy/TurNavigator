@@ -4,10 +4,10 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint, func
-from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
+from app.models.types import json_column_type
 
 if TYPE_CHECKING:
     from app.models.city import City
@@ -41,13 +41,13 @@ class POI(Base):
     wikipedia_title: Mapped[str | None] = mapped_column(String(255), nullable=True)
     wikipedia_url: Mapped[str | None] = mapped_column(String(512), nullable=True)
     wikimedia_commons: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    osm_tags: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
+    osm_tags: Mapped[dict[str, Any]] = mapped_column(json_column_type(), nullable=False, default=dict)
     estimated_price_level: Mapped[str] = mapped_column(String(32), nullable=False, default="unknown")
     average_cost_rub: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     estimated_visit_minutes: Mapped[int] = mapped_column(Integer, nullable=False, default=60)
     popularity_score: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
     data_quality_score: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
-    interests: Mapped[list[str]] = mapped_column(JSONB, nullable=False, default=list)
+    interests: Mapped[list[str]] = mapped_column(json_column_type(), nullable=False, default=list)
     interest_source: Mapped[str] = mapped_column(String(32), nullable=False, default="manual")
     data_freshness_days: Mapped[int] = mapped_column(Integer, nullable=False, default=30)
     last_enriched_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

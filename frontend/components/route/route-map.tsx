@@ -3,10 +3,10 @@
 import dynamic from 'next/dynamic'
 import { useEffect, useMemo, useState } from 'react'
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { LoaderIcon, MapPinIcon, RouteIcon } from '@/components/ui/icons'
-import type { Route, RoutePoint } from '@/lib/types'
+import type { Route, RoutePoint, TripLocation } from '@/lib/types'
 
 type Transport = 'walking' | 'public_transport' | 'car' | 'mixed'
 type LatLngTuple = [number, number]
@@ -21,6 +21,11 @@ interface RouteGeometryResponse {
   source: 'openrouteservice' | 'fallback'
   profile: string
   note: string
+}
+
+interface GeometryPointInput {
+  latitude: number
+  longitude: number
 }
 
 const RouteMapClient = dynamic(
@@ -38,15 +43,62 @@ const RouteMapClient = dynamic(
   },
 )
 
-function buildFallbackGeometry(routePoints: RoutePoint[]): LatLngTuple[] {
-  return routePoints.map((point) => [point.latitude, point.longitude])
+function buildGeometryPoints(route: Route): GeometryPointInput[] {
+  const points: GeometryPointInput[] = []
+
+  if (route.start_location) {
+    points.push({
+      latitude: route.start_location.latitude,
+      longitude: route.start_location.longitude,
+    })
+  }
+
+  points.push(
+    ...route.route_points.map((point) => ({
+      latitude: point.latitude,
+      longitude: point.longitude,
+    })),
+  )
+
+  if (route.end_location && route.route_points.length > 0) {
+    points.push({
+      latitude: route.end_location.latitude,
+      longitude: route.end_location.longitude,
+    })
+  }
+
+  return points
+}
+
+function buildFallbackGeometry(
+  routePoints: RoutePoint[],
+  startLocation: TripLocation | null,
+  endLocation: TripLocation | null,
+): LatLngTuple[] {
+  const points: LatLngTuple[] = []
+
+  if (startLocation) {
+    points.push([startLocation.latitude, startLocation.longitude])
+  }
+
+  points.push(...routePoints.map((point) => [point.latitude, point.longitude] satisfies LatLngTuple))
+
+  if (endLocation && routePoints.length > 0) {
+    points.push([endLocation.latitude, endLocation.longitude])
+  }
+
+  return points
 }
 
 export function RouteMap({ route, transport }: RouteMapProps) {
   const [geometryState, setGeometryState] = useState<RouteGeometryResponse | null>(null)
   const [isLoading, setIsLoading] = useState(false)
 
-  const fallbackGeometry = useMemo(() => buildFallbackGeometry(route.route_points), [route.route_points])
+  const geometryPoints = useMemo(() => buildGeometryPoints(route), [route])
+  const fallbackGeometry = useMemo(
+    () => buildFallbackGeometry(route.route_points, route.start_location, route.end_location),
+    [route.end_location, route.route_points, route.start_location],
+  )
 
   useEffect(() => {
     let isCancelled = false
@@ -62,10 +114,7 @@ export function RouteMap({ route, transport }: RouteMapProps) {
           },
           body: JSON.stringify({
             transport,
-            points: route.route_points.map((point) => ({
-              latitude: point.latitude,
-              longitude: point.longitude,
-            })),
+            points: geometryPoints,
           }),
         })
 
@@ -93,12 +142,21 @@ export function RouteMap({ route, transport }: RouteMapProps) {
       }
     }
 
+    if (geometryPoints.length === 0) {
+      const frameId = window.requestAnimationFrame(() => {
+        setGeometryState(null)
+      })
+      return () => {
+        window.cancelAnimationFrame(frameId)
+      }
+    }
+
     void loadGeometry()
 
     return () => {
       isCancelled = true
     }
-  }, [fallbackGeometry, route.id, route.route_points, transport])
+  }, [fallbackGeometry, geometryPoints, route.id, transport])
 
   const geometry = geometryState?.geometry?.length ? geometryState.geometry : fallbackGeometry
 
@@ -136,6 +194,8 @@ export function RouteMap({ route, transport }: RouteMapProps) {
           mapKey={`${route.id}-${geometryState?.source ?? 'fallback'}-${transport}`}
           routePoints={route.route_points}
           geometry={geometry}
+          startLocation={route.start_location}
+          endLocation={route.end_location}
         />
 
         <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">

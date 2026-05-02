@@ -2,12 +2,15 @@ import type {
   City,
   TripRequest,
   TripRequestInput,
+  SavedProfile,
+  TripProfile,
   RecommendationsResponse,
   GenerateRecommendationsInput,
   Route,
   BuildRouteInput,
   FeedbackInput,
   FeedbackResponse,
+  POI,
 } from './types'
 
 class ApiError extends Error {
@@ -52,6 +55,33 @@ export const api = {
   // Cities
   async getCities(): Promise<City[]> {
     return fetchApi<City[]>('/api/cities')
+  },
+
+  async getCityPois(
+    cityId: number,
+    options?: { category?: string; limit?: number; offset?: number }
+  ): Promise<POI[]> {
+    const params = new URLSearchParams()
+    if (options?.category) {
+      params.set('category', options.category)
+    }
+    if (typeof options?.limit === 'number') {
+      params.set('limit', String(options.limit))
+    }
+    if (typeof options?.offset === 'number') {
+      params.set('offset', String(options.offset))
+    }
+
+    const query = params.size > 0 ? `?${params.toString()}` : ''
+    return fetchApi<POI[]>(`/api/cities/${cityId}/pois${query}`)
+  },
+
+  // Profiles
+  async createProfile(input: TripProfile): Promise<SavedProfile> {
+    return fetchApi<SavedProfile>('/api/profiles', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    })
   },
 
   // Trip Requests

@@ -11,12 +11,14 @@ import {
   useMap,
 } from 'react-leaflet'
 
-import type { RoutePoint } from '@/lib/types'
+import type { RoutePoint, TripLocation } from '@/lib/types'
 
 interface RouteMapClientProps {
   mapKey: string
   routePoints: RoutePoint[]
   geometry: LatLngTuple[]
+  startLocation: TripLocation | null
+  endLocation: TripLocation | null
 }
 
 function MapBehavior() {
@@ -39,16 +41,39 @@ function MapBehavior() {
   return null
 }
 
-function buildBounds(routePoints: RoutePoint[], geometry: LatLngTuple[]): LatLngTuple[] {
+function buildBounds(
+  routePoints: RoutePoint[],
+  geometry: LatLngTuple[],
+  startLocation: TripLocation | null,
+  endLocation: TripLocation | null,
+): LatLngTuple[] {
   if (geometry.length > 0) {
     return geometry
   }
 
-  return routePoints.map((point) => [point.latitude, point.longitude] satisfies LatLngTuple)
+  const points = routePoints.map((point) => [point.latitude, point.longitude] satisfies LatLngTuple)
+  if (startLocation) {
+    points.unshift([startLocation.latitude, startLocation.longitude])
+  }
+  if (endLocation) {
+    points.push([endLocation.latitude, endLocation.longitude])
+  }
+  return points
 }
 
-export function RouteMapClient({ mapKey, routePoints, geometry }: RouteMapClientProps) {
-  const bounds = buildBounds(routePoints, geometry)
+export function RouteMapClient({
+  mapKey,
+  routePoints,
+  geometry,
+  startLocation,
+  endLocation,
+}: RouteMapClientProps) {
+  const bounds = buildBounds(routePoints, geometry, startLocation, endLocation)
+  const isRoundTrip =
+    Boolean(startLocation && endLocation) &&
+    startLocation?.latitude === endLocation?.latitude &&
+    startLocation?.longitude === endLocation?.longitude &&
+    startLocation?.address === endLocation?.address
 
   return (
     <MapContainer
@@ -81,18 +106,57 @@ export function RouteMapClient({ mapKey, routePoints, geometry }: RouteMapClient
         />
       )}
 
-      {routePoints.map((point, index) => {
-        const isFirst = index === 0
-        const isLast = index === routePoints.length - 1
+      {startLocation && (
+        <CircleMarker
+          center={[startLocation.latitude, startLocation.longitude]}
+          radius={11}
+          pathOptions={{
+            color: isRoundTrip ? '#1d4ed8' : '#166534',
+            fillColor: isRoundTrip ? '#60a5fa' : '#22c55e',
+            fillOpacity: 1,
+            weight: 3,
+          }}
+        >
+          <Popup>
+            <div className="space-y-1">
+              <div className="text-sm font-semibold">
+                {isRoundTrip ? 'Старт и финиш' : 'Старт'}: {startLocation.name || 'Отель'}
+              </div>
+              <div className="text-xs text-stone-600">{startLocation.address}</div>
+            </div>
+          </Popup>
+        </CircleMarker>
+      )}
 
+      {endLocation && !isRoundTrip && (
+        <CircleMarker
+          center={[endLocation.latitude, endLocation.longitude]}
+          radius={11}
+          pathOptions={{
+            color: '#92400e',
+            fillColor: '#f59e0b',
+            fillOpacity: 1,
+            weight: 3,
+          }}
+        >
+          <Popup>
+            <div className="space-y-1">
+              <div className="text-sm font-semibold">Финиш: {endLocation.name || 'Финальная точка'}</div>
+              <div className="text-xs text-stone-600">{endLocation.address}</div>
+            </div>
+          </Popup>
+        </CircleMarker>
+      )}
+
+      {routePoints.map((point) => {
         return (
           <CircleMarker
             key={point.poi_id}
             center={[point.latitude, point.longitude]}
-            radius={isFirst || isLast ? 12 : 10}
+            radius={10}
             pathOptions={{
-              color: isFirst ? '#166534' : isLast ? '#92400e' : '#2f7d44',
-              fillColor: isFirst ? '#22c55e' : isLast ? '#f59e0b' : '#ffffff',
+              color: '#2f7d44',
+              fillColor: '#ffffff',
               fillOpacity: 1,
               weight: 3,
             }}

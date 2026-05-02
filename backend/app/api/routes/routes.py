@@ -1,8 +1,12 @@
 from fastapi import APIRouter, HTTPException, status
 
+from app.services.decision_log_store import record_decision_event
+from app.services.planning_serialization import to_json
 from app.schemas.poi import PointOfInterestResponse
+from app.schemas.planning import TripLocationResponse
 from app.schemas.route import RouteBuildRequest, RoutePlanResponse
 from app.services.catalog_service import get_city, get_poi
+from app.services.recommendation_store import get_latest_recommendation_run_id
 from app.services.recommender import generate_recommendations
 from app.services.route_builder import build_route_plan
 from app.services.route_store import get_route, save_route
@@ -66,21 +70,48 @@ async def build_route_endpoint(payload: RouteBuildRequest) -> RoutePlanResponse:
         )
 
     pois = _resolve_route_pois(payload=payload, city_id=trip_request.city_id)
+    start_location = (
+        TripLocationResponse(**payload.start_location.model_dump())
+        if payload.start_location is not None
+        else trip_request.start_location
+    )
+    end_location = (
+        TripLocationResponse(**payload.end_location.model_dump())
+        if payload.end_location is not None
+        else trip_request.end_location
+    )
     route_plan = build_route_plan(
         trip_request=trip_request,
         city=city,
         pois=pois,
         optimize_order=payload.optimize_order,
         strict_constraints=payload.strict_constraints,
+        start_location=start_location,
+        end_location=end_location,
     )
-    return save_route(route_plan)
+    recommendation_run_id = get_latest_recommendation_run_id(trip_request.id)
+    saved_route = save_route(route_plan, recommendation_run_id=recommendation_run_id)
+    record_decision_event(
+        event_type="route_built",
+        city_id=trip_request.city_id,
+        trip_request_id=trip_request.id,
+        recommendation_run_id=recommendation_run_id,
+        route_id=saved_route.id,
+        input_context=to_json(payload),
+        profile_snapshot=to_json(trip_request.profile),
+        route_snapshot=to_json(saved_route),
+        explanation_snapshot={
+            "summary": saved_route.explanation_summary,
+        },
+    )
+    return saved_route
 
 
 @router.get(
     "/routes/{route_id}",
     response_model=RoutePlanResponse,
     summary="Get route plan by id",
-    description="Returns a previously built in-memory route plan.",
+    description="Returns a previously built persisted route plan.",
     response_description="Route plan details.",
     responses={
         404: {

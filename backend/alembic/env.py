@@ -8,6 +8,7 @@ from sqlalchemy import engine_from_config, pool
 from app.core.settings import get_settings
 from app.db.base import Base
 from app.models import city as city_models  # noqa: F401
+from app.models import planning as planning_models  # noqa: F401
 from app.models import poi as poi_models  # noqa: F401
 
 config = context.config

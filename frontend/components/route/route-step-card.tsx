@@ -10,6 +10,9 @@ import { getCategoryLabel } from '@/lib/types'
 interface RouteStepCardProps {
   point: RoutePoint
   isLast: boolean
+  startLabel?: string
+  nextLegDistanceKm?: number
+  nextLegTravelMinutes?: number
 }
 
 const categoryStyles: Record<string, { bg: string; text: string }> = {
@@ -23,8 +26,15 @@ const categoryStyles: Record<string, { bg: string; text: string }> = {
   nightlife: { bg: 'bg-indigo-50', text: 'text-indigo-700' },
 }
 
-export function RouteStepCard({ point, isLast }: RouteStepCardProps) {
+export function RouteStepCard({
+  point,
+  isLast,
+  startLabel,
+  nextLegDistanceKm = 0,
+  nextLegTravelMinutes = 0,
+}: RouteStepCardProps) {
   const styles = categoryStyles[point.category] || { bg: 'bg-muted', text: 'text-foreground' }
+  const arrivalLabel = point.order === 1 && startLabel ? `От ${startLabel}` : 'Переход до точки'
 
   return (
     <div className="relative">
@@ -78,10 +88,12 @@ export function RouteStepCard({ point, isLast }: RouteStepCardProps) {
                   <span className="font-medium text-foreground">{point.estimated_cost_rub.toLocaleString('ru-RU')} р.</span>
                 </div>
               )}
-              {point.order > 1 && point.leg_distance_km > 0 && (
+              {point.leg_distance_km > 0 && (
                 <div className="flex items-center gap-1.5 text-muted-foreground">
                   <FootprintsIcon className="h-3.5 w-3.5" />
-                  <span className="font-medium text-foreground">{point.leg_distance_km.toFixed(1)} км</span>
+                  <span className="font-medium text-foreground">
+                    {arrivalLabel}: {point.leg_distance_km.toFixed(1)} км
+                  </span>
                 </div>
               )}
             </div>
@@ -89,10 +101,10 @@ export function RouteStepCard({ point, isLast }: RouteStepCardProps) {
         </div>
 
         {/* Travel indicator */}
-        {!isLast && point.leg_travel_minutes > 0 && (
+        {!isLast && nextLegTravelMinutes > 0 && (
           <div className="flex items-center gap-2 mt-2 ml-2 text-xs text-muted-foreground">
             <ArrowDownIcon className="h-3 w-3" />
-            <span>{point.leg_travel_minutes} мин ({point.leg_distance_km.toFixed(1)} км)</span>
+            <span>{nextLegTravelMinutes} мин ({nextLegDistanceKm.toFixed(1)} км)</span>
           </div>
         )}
       </div>

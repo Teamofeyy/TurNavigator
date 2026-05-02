@@ -11,6 +11,8 @@ interface RouteSummaryProps {
 export function RouteSummary({ route }: RouteSummaryProps) {
   const totalHours = Math.floor(route.total_time_minutes / 60)
   const totalMinutes = route.total_time_minutes % 60
+  const startLabel = route.start_location?.name || route.start_location?.address
+  const endLabel = route.end_location?.name || route.end_location?.address
 
   return (
     <div className="space-y-4">
@@ -72,6 +74,25 @@ export function RouteSummary({ route }: RouteSummaryProps) {
           {route.within_time_limit ? 'По времени' : 'Превышает время'}
         </Badge>
       </div>
+
+      {(startLabel || endLabel) && (
+        <div className="grid gap-3 rounded-xl border border-stone-200 bg-stone-50 px-4 py-4 text-sm text-stone-700 lg:grid-cols-3">
+          <div>
+            <div className="mb-1 text-xs uppercase tracking-[0.04em] text-stone-500">Старт</div>
+            <div className="font-medium text-stone-900">{startLabel ?? 'Центр города'}</div>
+          </div>
+          <div>
+            <div className="mb-1 text-xs uppercase tracking-[0.04em] text-stone-500">Финиш</div>
+            <div className="font-medium text-stone-900">{endLabel ?? 'Центр города'}</div>
+          </div>
+          <div>
+            <div className="mb-1 text-xs uppercase tracking-[0.04em] text-stone-500">Обратный участок</div>
+            <div className="font-medium text-stone-900">
+              {route.return_leg_travel_minutes} мин / {route.return_leg_distance_km.toFixed(1)} км
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Summary info */}
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg bg-muted px-4 py-3 text-sm">
