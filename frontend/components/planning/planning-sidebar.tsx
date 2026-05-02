@@ -21,6 +21,7 @@ import {
   type City,
   type POI,
   type PlanningState,
+  type SavedProfile,
 } from '@/lib/types'
 import { CitySelector } from './city-selector'
 import { InterestSelector } from './interest-selector'
@@ -32,8 +33,11 @@ interface PlanningSidebarProps {
   citiesLoading: boolean
   hotels: POI[]
   hotelsLoading: boolean
+  savedProfiles: SavedProfile[]
+  savedProfilesLoading: boolean
   state: PlanningState
   onChange: (updates: Partial<PlanningState>) => void
+  onSelectSavedProfile: (profile: SavedProfile | null) => void
   onGenerate: () => void
   isGenerating: boolean
   errorMessage: string | null
@@ -86,8 +90,11 @@ export function PlanningSidebar({
   citiesLoading,
   hotels,
   hotelsLoading,
+  savedProfiles,
+  savedProfilesLoading,
   state,
   onChange,
+  onSelectSavedProfile,
   onGenerate,
   isGenerating,
   errorMessage,
@@ -127,6 +134,50 @@ export function PlanningSidebar({
                 })}
               isLoading={citiesLoading}
             />
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label className="text-sm font-medium text-stone-700">Сохранённые профили</Label>
+              {savedProfilesLoading && <span className="text-xs text-stone-500">Загрузка...</span>}
+            </div>
+
+            <Select
+              value={state.selectedProfileId ? String(state.selectedProfileId) : 'new'}
+              onValueChange={(value) => {
+                if (value === 'new') {
+                  onSelectSavedProfile(null)
+                  return
+                }
+
+                const profile = savedProfiles.find((item) => item.id === Number(value))
+                if (profile) {
+                  onSelectSavedProfile(profile)
+                }
+              }}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Выберите сохранённый профиль" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="new">Текущие настройки как новый профиль</SelectItem>
+                {savedProfiles.map((profile) => (
+                  <SelectItem key={profile.id} value={String(profile.id)}>
+                    {profile.profile_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Input
+              value={state.profileName}
+              onChange={(event) => onChange({ profileName: event.target.value })}
+              placeholder="Название профиля для повторного использования"
+            />
+            <p className="text-xs text-stone-500">
+              Профиль сохраняет устойчивые предпочтения и может переиспользоваться между
+              планированиями без регистрации.
+            </p>
           </div>
 
           <div className="space-y-2">

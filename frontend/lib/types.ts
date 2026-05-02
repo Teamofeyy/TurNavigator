@@ -20,6 +20,7 @@ export type TrustLevel = 'low' | 'medium' | 'high'
 export type PreferredTimeWindow = 'morning' | 'afternoon' | 'evening'
 
 export interface TripProfile {
+  profile_name: string
   interests: string[]
   budget_level: 'low' | 'medium' | 'high'
   max_budget: number
@@ -258,6 +259,8 @@ export type TabType = 'context' | 'recommendations' | 'route'
 export interface PlanningState {
   selectedCity: City | null
   selectedHotel: POI | null
+  selectedProfileId: number | null
+  profileName: string
   hotelAddress: string
   interests: string[]
   goals: string[]

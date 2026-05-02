@@ -11,12 +11,15 @@ import type {
   POI,
   Recommendation,
   Route,
+  SavedProfile,
   TabType,
   TripLocation,
   TripProfile,
 } from '@/lib/types'
 
 const baseState: Omit<PlanningState, 'selectedCity' | 'selectedHotel'> = {
+  selectedProfileId: null,
+  profileName: 'Профиль путешественника',
   hotelAddress: '',
   interests: ['history', 'culture', 'food'],
   goals: ['discover_local_culture', 'maximize_variety'],
@@ -55,6 +58,8 @@ export function TravelContextApp({ initialCities }: TravelContextAppProps) {
 
   const [hotels, setHotels] = useState<POI[]>([])
   const [hotelsLoading, setHotelsLoading] = useState(false)
+  const [savedProfiles, setSavedProfiles] = useState<SavedProfile[]>([])
+  const [savedProfilesLoading, setSavedProfilesLoading] = useState(false)
   const [recommendations, setRecommendations] = useState<Recommendation[]>([])
   const [route, setRoute] = useState<Route | null>(null)
   const [hasGenerated, setHasGenerated] = useState(false)
@@ -62,6 +67,24 @@ export function TravelContextApp({ initialCities }: TravelContextAppProps) {
   const [isGenerating, setIsGenerating] = useState(false)
   const [loadingMessage, setLoadingMessage] = useState('')
   const [generationError, setGenerationError] = useState<string | null>(null)
+
+  const refreshSavedProfiles = useCallback(async () => {
+    setSavedProfilesLoading(true)
+    try {
+      const profiles = await api.getProfiles(40)
+      setSavedProfiles(profiles)
+    } catch {
+      setSavedProfiles([])
+    } finally {
+      setSavedProfilesLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    queueMicrotask(() => {
+      void refreshSavedProfiles()
+    })
+  }, [refreshSavedProfiles])
 
   useEffect(() => {
     const cityId = state.selectedCity?.id
@@ -115,10 +138,8 @@ export function TravelContextApp({ initialCities }: TravelContextAppProps) {
   }, [state.selectedCity?.id])
 
   const handleStateChange = useCallback((updates: Partial<PlanningState>) => {
-    const shouldResetGeneratedResult =
-      ('selectedCity' in updates && updates.selectedCity?.id !== state.selectedCity?.id) ||
-      'selectedHotel' in updates ||
-      'hotelAddress' in updates ||
+    const profileFieldsChanged =
+      'profileName' in updates ||
       'interests' in updates ||
       'goals' in updates ||
       'mustHave' in updates ||
@@ -128,10 +149,17 @@ export function TravelContextApp({ initialCities }: TravelContextAppProps) {
       'pace' in updates ||
       'maxWalkingDistance' in updates ||
       'preferredTransport' in updates ||
+      'explanationLevel' in updates ||
       'compromiseStrategy' in updates ||
       'trustLevel' in updates ||
       'accessibilityNeeds' in updates ||
-      'preferredTimeWindows' in updates ||
+      'preferredTimeWindows' in updates
+
+    const shouldResetGeneratedResult =
+      ('selectedCity' in updates && updates.selectedCity?.id !== state.selectedCity?.id) ||
+      'selectedHotel' in updates ||
+      'hotelAddress' in updates ||
+      profileFieldsChanged ||
       'daysCount' in updates ||
       'dailyTimeLimit' in updates
 
@@ -146,24 +174,69 @@ export function TravelContextApp({ initialCities }: TravelContextAppProps) {
       setHotels([])
       setHotelsLoading(false)
     }
-    setState((prev) => ({ ...prev, ...updates }))
+    setState((prev) => ({
+      ...prev,
+      ...updates,
+      ...(profileFieldsChanged && !('selectedProfileId' in updates)
+        ? { selectedProfileId: null }
+        : {}),
+    }))
   }, [state.selectedCity?.id])
+
+  const handleSavedProfileSelect = useCallback((profile: SavedProfile | null) => {
+    if (profile === null) {
+      handleStateChange({ selectedProfileId: null })
+      return
+    }
+
+    handleStateChange({
+      selectedProfileId: profile.id,
+      profileName: profile.profile_name,
+      interests: profile.interests,
+      goals: profile.goals,
+      mustHave: profile.must_have.join('\n'),
+      avoid: profile.avoid.join('\n'),
+      budgetLevel: profile.budget_level,
+      maxBudget: profile.max_budget,
+      pace: profile.pace,
+      maxWalkingDistance: profile.max_walking_distance_km,
+      preferredTransport: profile.preferred_transport,
+      explanationLevel: profile.explanation_level,
+      compromiseStrategy: profile.compromise_strategy,
+      trustLevel: profile.trust_level,
+      accessibilityNeeds: profile.accessibility_needs,
+      preferredTimeWindows: profile.preferred_time_windows,
+    })
+  }, [handleStateChange])
 
   const handleGenerate = useCallback(async () => {
     if (!state.selectedCity) return
 
     setIsGenerating(true)
     setGenerationError(null)
-    setLoadingMessage('Сохранение профиля путешественника...')
 
     try {
-      const savedProfile = await api.createProfile(buildTripProfile(state))
+      let profileId = state.selectedProfileId
+      if (profileId) {
+        setLoadingMessage('Используем сохранённый профиль...')
+      } else {
+        setLoadingMessage('Сохранение профиля путешественника...')
+        const savedProfile = await api.createProfile(buildTripProfile(state))
+        profileId = savedProfile.id
+        setState((prev) => ({
+          ...prev,
+          selectedProfileId: savedProfile.id,
+          profileName: savedProfile.profile_name,
+        }))
+        await refreshSavedProfiles()
+      }
+
       const hotelLocation = buildHotelLocation(state.selectedHotel, state.hotelAddress)
 
       setLoadingMessage('Создание запроса на поездку...')
       const tripRequest = await api.createTripRequest({
         city_id: state.selectedCity.id,
-        profile_id: savedProfile.id,
+        profile_id: profileId,
         days_count: state.daysCount,
         daily_time_limit_hours: state.dailyTimeLimit,
         selected_interests: state.interests,
@@ -213,7 +286,7 @@ export function TravelContextApp({ initialCities }: TravelContextAppProps) {
       setIsGenerating(false)
       setLoadingMessage('')
     }
-  }, [state])
+  }, [refreshSavedProfiles, state])
 
   return (
     <div className="min-h-screen bg-background lg:grid lg:grid-cols-[400px_minmax(0,1fr)]">
@@ -222,8 +295,11 @@ export function TravelContextApp({ initialCities }: TravelContextAppProps) {
         citiesLoading={false}
         hotels={hotels}
         hotelsLoading={hotelsLoading}
+        savedProfiles={savedProfiles}
+        savedProfilesLoading={savedProfilesLoading}
         state={state}
         onChange={handleStateChange}
+        onSelectSavedProfile={handleSavedProfileSelect}
         onGenerate={handleGenerate}
         isGenerating={isGenerating}
         errorMessage={generationError}
@@ -246,6 +322,7 @@ export function TravelContextApp({ initialCities }: TravelContextAppProps) {
 
 function buildTripProfile(state: PlanningState): TripProfile {
   return {
+    profile_name: buildProfileName(state),
     interests: state.interests,
     budget_level: state.budgetLevel,
     max_budget: state.maxBudget,
@@ -261,6 +338,16 @@ function buildTripProfile(state: PlanningState): TripProfile {
     accessibility_needs: state.accessibilityNeeds,
     preferred_time_windows: state.preferredTimeWindows,
   }
+}
+
+function buildProfileName(state: PlanningState): string {
+  const explicitName = state.profileName.trim()
+  if (explicitName) {
+    return explicitName
+  }
+
+  const topInterests = state.interests.slice(0, 2).join(' + ')
+  return topInterests ? `Профиль: ${topInterests}` : 'Профиль путешественника'
 }
 
 function buildHotelLocation(selectedHotel: POI | null, hotelAddress: string): TripLocation | null {
