@@ -1,0 +1,84 @@
+{
+  "scenarios": [
+    {
+      "city_id": 1,
+      "city_name": "Москва",
+      "precision_at_5": 1.0,
+      "coverage": 0.286,
+      "budget_fit": 1.0,
+      "time_fit": 1.0,
+      "explanation_usefulness": 1.0,
+      "context_robustness": 1.0,
+      "total_candidates": 3,
+      "route_points": 3
+    },
+    {
+      "city_id": 1,
+      "city_name": "Москва",
+      "precision_at_5": 1.0,
+      "coverage": 0.286,
+      "budget_fit": 1.0,
+      "time_fit": 1.0,
+      "explanation_usefulness": 1.0,
+      "context_robustness": 1.0,
+      "total_candidates": 2,
+      "route_points": 2
+    },
+    {
+      "city_id": 2,
+      "city_name": "Санкт-Петербург",
+      "precision_at_5": 1.0,
+      "coverage": 0.286,
+      "budget_fit": 1.0,
+      "time_fit": 1.0,
+      "explanation_usefulness": 1.0,
+      "context_robustness": 1.0,
+      "total_candidates": 3,
+      "route_points": 3
+    },
+    {
+      "city_id": 2,
+      "city_name": "Санкт-Петербург",
+      "precision_at_5": 1.0,
+      "coverage": 0.286,
+      "budget_fit": 1.0,
+      "time_fit": 1.0,
+      "explanation_usefulness": 1.0,
+      "context_robustness": 1.0,
+      "total_candidates": 2,
+      "route_points": 2
+    },
+    {
+      "city_id": 3,
+      "city_name": "Казань",
+      "precision_at_5": 1.0,
+      "coverage": 0.286,
+      "budget_fit": 1.0,
+      "time_fit": 1.0,
+      "explanation_usefulness": 1.0,
+      "context_robustness": 1.0,
+      "total_candidates": 3,
+      "route_points": 3
+    },
+    {
+      "city_id": 3,
+      "city_name": "Казань",
+      "precision_at_5": 1.0,
+      "coverage": 0.286,
+      "budget_fit": 1.0,
+      "time_fit": 1.0,
+      "explanation_usefulness": 1.0,
+      "context_robustness": 1.0,
+      "total_candidates": 2,
+      "route_points": 2
+    }
+  ],
+  "summary": {
+    "precision_at_5": 1.0,
+    "coverage": 0.286,
+    "budget_fit": 1.0,
+    "time_fit": 1.0,
+    "explanation_usefulness": 1.0,
+    "context_robustness": 1.0
+  }
+}

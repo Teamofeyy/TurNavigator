@@ -1,0 +1,26 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: check-yaml
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: check-merge-conflict
+
+  - repo: local
+    hooks:
+      - id: backend-ruff
+        name: backend ruff
+        entry: bash -lc 'cd backend && UV_CACHE_DIR=../.uv-cache uv run ruff check .'
+        language: system
+        pass_filenames: false
+      - id: frontend-eslint
+        name: frontend eslint
+        entry: bash -lc 'cd frontend && npm run lint'
+        language: system
+        pass_filenames: false
+      - id: frontend-typecheck
+        name: frontend typecheck
+        entry: bash -lc 'cd frontend && npm run typecheck'
+        language: system
+        pass_filenames: false

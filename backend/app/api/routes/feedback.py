@@ -44,7 +44,8 @@ async def create_feedback_endpoint(payload: FeedbackCreate) -> FeedbackResponse:
     summary="List decision log entries",
     description=(
         "Returns recent feedback and decision log entries persisted during planning. "
-        "This is useful for experiments and demonstration of explainable planning history."
+        "This is useful for experiments and demonstration of explainable planning history. "
+        "In the current MVP this endpoint should be treated as a demo/admin surface."
     ),
     response_description="Recent decision log entries.",
 )

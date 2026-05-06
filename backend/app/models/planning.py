@@ -1,22 +1,22 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import TYPE_CHECKING
-
 from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
 from app.models.types import json_column_type
 
-if TYPE_CHECKING:
-    from app.models.city import City
-
 
 class UserProfile(Base):
     __tablename__ = "user_profiles"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    profile_name: Mapped[str] = mapped_column(
+        String(120),
+        nullable=False,
+        default="Профиль путешественника",
+    )
     interests: Mapped[list[str]] = mapped_column(json_column_type(), nullable=False, default=list)
     budget_level: Mapped[str] = mapped_column(String(32), nullable=False, default="medium")
     max_budget: Mapped[int] = mapped_column(Integer, nullable=False, default=0)

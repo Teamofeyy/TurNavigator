@@ -23,7 +23,8 @@ router = APIRouter(tags=["routes"])
     description=(
         "Builds an ordered route from selected POIs or from generated recommendations. "
         "The route builder estimates distance, movement time, visit time, budget, "
-        "and checks whether the plan fits time and budget constraints."
+        "and checks whether the plan fits time and budget constraints, including "
+        "the projected return leg to the final point when strict constraints are enabled."
     ),
     response_description="Built route plan.",
     responses={

@@ -71,7 +71,9 @@ async def create_trip_request_endpoint(
     description=(
         "Generates a ranked list of points of interest for an existing trip request. "
         "The scoring model combines interest match, budget fit, route convenience, "
-        "pace fit, popularity, and data quality."
+        "pace fit, popularity, and data quality, then adjusts the ranking with "
+        "goals, must-have/avoid constraints, trust level, accessibility needs, "
+        "and preferred time windows from the saved profile."
     ),
     response_description="Ranked recommendations with explanations.",
     responses={

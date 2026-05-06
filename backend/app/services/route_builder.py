@@ -47,6 +47,16 @@ def build_route_plan(
             distance_km=leg_distance_km,
             transport=trip_request.profile.preferred_transport,
         )
+        projected_return_distance_km = _distance_km(
+            poi.latitude,
+            poi.longitude,
+            resolved_end.latitude,
+            resolved_end.longitude,
+        )
+        projected_return_travel_minutes = _travel_minutes(
+            distance_km=projected_return_distance_km,
+            transport=trip_request.profile.preferred_transport,
+        )
         next_total_time = (
             total_travel_minutes
             + total_visit_minutes
@@ -56,7 +66,7 @@ def build_route_plan(
         next_total_budget = total_budget + poi.average_cost_rub
 
         if strict_constraints and (
-            next_total_time > total_time_limit
+            (next_total_time + projected_return_travel_minutes) > total_time_limit
             or next_total_budget > trip_request.profile.max_budget
         ):
             skipped_poi_ids.append(poi.id)

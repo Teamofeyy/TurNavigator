@@ -2,6 +2,48 @@
 
 Прототип интеллектуальной системы поддержки планирования путешествий с учетом пользовательского контекста и ресурсных ограничений.
 
+## Docker
+
+Полный стек теперь можно поднять одной командой: `postgres + backend + frontend + caddy`.
+
+```bash
+cp .env.example .env
+docker compose up --build -d
+```
+
+По умолчанию приложение доступно через Caddy:
+
+```text
+https://localhost:8443
+```
+
+HTTP редирект и TLS обслуживает Caddy, backend и frontend остаются во внутренней Docker-сети. Для локального запуска pgAdmin:
+
+```bash
+docker compose --profile tools up -d pgadmin
+```
+
+Прод-сборка для VDS вынесена в `compose.production.yaml`: она использует уже опубликованные образы из Docker Hub и тот же `deploy/caddy/Caddyfile`.
+
+## Quality Gates
+
+Локальные проверки перед коммитом теперь запускаются через `pre-commit`, а CI повторяет тот же набор хуков:
+
+```bash
+cd backend
+UV_CACHE_DIR=../.uv-cache uv sync --all-groups
+UV_CACHE_DIR=../.uv-cache uv run pre-commit install --config ../.pre-commit-config.yaml --install-hooks
+```
+
+Что проверяется до коммита:
+
+- `ruff check` для backend;
+- `eslint` для frontend;
+- `tsc --noEmit` для frontend;
+- базовые YAML/whitespace/merge-conflict проверки.
+
+CI/CD находится в [`.github/workflows/ci-cd.yml`](/Users/teamofey/magistr-diploma/.github/workflows/ci-cd.yml). Pipeline сначала гоняет quality-проверки и frontend build, затем собирает Docker-образы, публикует их в Docker Hub и по SSH обновляет `compose.production.yaml` на VDS.
+
 ## Backend
 
 Backend находится в папке `backend` и использует FastAPI + uv.

@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import argparse
+import csv
 import json
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from pathlib import Path
 from statistics import mean
 
 from app.schemas.planning import TripRequestResponse
@@ -35,6 +37,7 @@ def build_profile(
     now = datetime.now(UTC)
     return UserProfileResponse(
         id=profile_id,
+        profile_name=f"Scenario {profile_id}",
         interests=scenario.interests,
         budget_level=scenario.budget_level,
         max_budget=scenario.max_budget,
@@ -186,6 +189,7 @@ def evaluate_scenario(index: int, scenario: Scenario) -> dict[str, float | int |
 
     return {
         "city_id": scenario.city_id,
+        "city_name": city.name,
         "precision_at_5": round(precision_at_k(recommendations, 5), 3),
         "coverage": round(category_coverage(scenario.city_id, recommendations), 3),
         "budget_fit": 1.0 if route.within_budget else 0.0,
@@ -248,10 +252,48 @@ def summarize(results: list[dict[str, float | int | str]]) -> dict[str, float]:
     }
 
 
+def write_report_files(report: dict, output_dir: Path) -> tuple[Path, Path]:
+    output_dir.mkdir(parents=True, exist_ok=True)
+    json_path = output_dir / "recommender-evaluation.json"
+    csv_path = output_dir / "recommender-evaluation.csv"
+
+    json_path.write_text(
+        json.dumps(report, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+    rows = report.get("scenarios", [])
+    fieldnames = [
+        "city_id",
+        "city_name",
+        "precision_at_5",
+        "coverage",
+        "budget_fit",
+        "time_fit",
+        "explanation_usefulness",
+        "context_robustness",
+        "total_candidates",
+        "route_points",
+    ]
+    with csv_path.open("w", encoding="utf-8", newline="") as csv_file:
+        writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
+        writer.writeheader()
+        for row in rows:
+            writer.writerow({field: row.get(field) for field in fieldnames})
+
+    return json_path, csv_path
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Evaluate TravelContext recommendation quality.")
     parser.add_argument("--city-id", type=int, default=None, help="Evaluate only one city id.")
     parser.add_argument("--json", action="store_true", help="Print the report as JSON.")
+    parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=Path(__file__).resolve().parents[3] / "docs" / "results",
+        help="Directory where JSON and CSV evaluation artifacts will be saved.",
+    )
     args = parser.parse_args()
 
     scenarios = build_default_scenarios()
@@ -263,6 +305,7 @@ def main() -> None:
         "scenarios": results,
         "summary": summarize(results) if results else {},
     }
+    json_path, csv_path = write_report_files(report, args.output_dir)
 
     if args.json:
         print(json.dumps(report, ensure_ascii=False, indent=2))
@@ -270,6 +313,8 @@ def main() -> None:
 
     print("TravelContext evaluation report")
     print(json.dumps(report["summary"], ensure_ascii=False, indent=2))
+    print(f"Saved JSON report to {json_path}")
+    print(f"Saved CSV report to {csv_path}")
     print("Scenarios:")
     for item in results:
         print(json.dumps(item, ensure_ascii=False))

@@ -3,7 +3,7 @@
   "info": {
     "title": "TravelContext API",
     "summary": "API for the intelligent travel planning DSS prototype.",
-    "description": "TravelContext API powers a prototype decision support system for personalized travel planning. The current API version exposes health checks, cities, points of interest, trip requests, and personalized recommendations from seed data. It will be extended with feedback and persistent storage.",
+    "description": "TravelContext API powers a prototype decision support system for personalized travel planning. The current API version exposes health checks, cities, points of interest, saved profiles, trip requests, personalized recommendations, persisted routes, and decision logs.",
     "contact": {
       "name": "TravelContext project"
     },
@@ -287,7 +287,7 @@
           "planning"
         ],
         "summary": "Create trip planning request",
-        "description": "Creates an in-memory trip planning request from city, user profile, trip duration, and resource constraints. The generated id can be used to request recommendations.",
+        "description": "Creates a persisted trip planning request from city, reusable user profile, trip duration, and resource constraints. The generated id can be used to request recommendations and routes.",
         "operationId": "create_trip_request_endpoint_trip_requests_post",
         "requestBody": {
           "content": {
@@ -339,7 +339,7 @@
           "planning"
         ],
         "summary": "Generate personalized recommendations",
-        "description": "Generates a ranked list of points of interest for an existing trip request. The scoring model combines interest match, budget fit, route convenience, pace fit, popularity, and data quality.",
+        "description": "Generates a ranked list of points of interest for an existing trip request. The scoring model combines interest match, budget fit, route convenience, pace fit, popularity, and data quality, then adjusts the ranking with goals, must-have/avoid constraints, trust level, accessibility needs, and preferred time windows from the saved profile.",
         "operationId": "generate_recommendations_endpoint_recommendations_generate_post",
         "requestBody": {
           "content": {
@@ -396,13 +396,219 @@
         }
       }
     },
+    "/profiles": {
+      "post": {
+        "tags": [
+          "profiles"
+        ],
+        "summary": "Create a reusable user profile",
+        "description": "Persists an expanded digital consciousness profile with goals, constraints, and accessibility preferences.",
+        "operationId": "create_profile_endpoint_profiles_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserProfileCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created profile.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserProfileResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "profiles"
+        ],
+        "summary": "List saved user profiles",
+        "description": "Returns the most recent reusable planning profiles.",
+        "operationId": "list_profiles_endpoint_profiles_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "description": "Maximum number of profiles to return.",
+              "default": 20,
+              "title": "Limit"
+            },
+            "description": "Maximum number of profiles to return."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Saved profiles.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/UserProfileResponse"
+                  },
+                  "title": "Response List Profiles Endpoint Profiles Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/profiles/{profile_id}": {
+      "get": {
+        "tags": [
+          "profiles"
+        ],
+        "summary": "Get saved profile by id",
+        "description": "Returns one persisted planning profile.",
+        "operationId": "get_profile_endpoint_profiles__profile_id__get",
+        "parameters": [
+          {
+            "name": "profile_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Profile Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Saved profile.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserProfileResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Profile was not found.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Profile not found"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "profiles"
+        ],
+        "summary": "Update saved profile",
+        "description": "Updates one reusable MVP profile. The endpoint is intended for demo flows without a full user account system.",
+        "operationId": "update_profile_endpoint_profiles__profile_id__patch",
+        "parameters": [
+          {
+            "name": "profile_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Profile Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserProfileUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated profile.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserProfileResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Profile was not found.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Profile not found"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/routes/build": {
       "post": {
         "tags": [
           "routes"
         ],
         "summary": "Build route plan",
-        "description": "Builds an ordered route from selected POIs or from generated recommendations. The route builder estimates distance, movement time, visit time, budget, and checks whether the plan fits time and budget constraints.",
+        "description": "Builds an ordered route from selected POIs or from generated recommendations. The route builder estimates distance, movement time, visit time, budget, and checks whether the plan fits time and budget constraints, including the projected return leg to the final point when strict constraints are enabled.",
         "operationId": "build_route_endpoint_routes_build_post",
         "requestBody": {
           "content": {
@@ -475,7 +681,7 @@
           "routes"
         ],
         "summary": "Get route plan by id",
-        "description": "Returns a previously built in-memory route plan.",
+        "description": "Returns a previously built persisted route plan.",
         "operationId": "get_route_endpoint_routes__route_id__get",
         "parameters": [
           {
@@ -528,7 +734,7 @@
           "feedback"
         ],
         "summary": "Save route feedback",
-        "description": "Stores a user evaluation for a previously built route. The feedback entry is also written into the in-memory decision log for MVP experiments.",
+        "description": "Stores a user evaluation for a previously built route. The feedback entry is also written into the persistent decision log together with route snapshots.",
         "operationId": "create_feedback_endpoint_feedback_post",
         "requestBody": {
           "content": {
@@ -580,7 +786,7 @@
           "feedback"
         ],
         "summary": "List decision log entries",
-        "description": "Returns recent feedback and decision log entries created during the MVP session. This is useful for experiments and demonstration of explainable planning history.",
+        "description": "Returns recent feedback and decision log entries persisted during planning. This is useful for experiments and demonstration of explainable planning history. In the current MVP this endpoint should be treated as a demo/admin surface.",
         "operationId": "list_decision_logs_endpoint_decision_logs_get",
         "parameters": [
           {
@@ -797,25 +1003,17 @@
           "id": {
             "type": "integer",
             "title": "Id",
-            "description": "Saved feedback id.",
+            "description": "Decision log id.",
             "examples": [
               1
             ]
           },
-          "route_id": {
-            "type": "integer",
-            "title": "Route Id",
-            "description": "Route id.",
+          "event_type": {
+            "type": "string",
+            "title": "Event Type",
+            "description": "Type of planning event.",
             "examples": [
-              1
-            ]
-          },
-          "trip_request_id": {
-            "type": "integer",
-            "title": "Trip Request Id",
-            "description": "Trip request id.",
-            "examples": [
-              1
+              "route_built"
             ]
           },
           "city_id": {
@@ -826,75 +1024,140 @@
               6
             ]
           },
-          "rating": {
-            "type": "integer",
-            "maximum": 5.0,
-            "minimum": 1.0,
-            "title": "Rating",
-            "description": "User rating from 1 to 5.",
-            "examples": [
-              4
-            ]
-          },
-          "comment": {
+          "trip_request_id": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "integer"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Comment",
-            "description": "Optional user comment.",
-            "examples": [
-              "Маршрут хороший, но хотелось бы больше еды и меньше музеев."
-            ]
+            "title": "Trip Request Id",
+            "description": "Related trip request id."
           },
-          "route_points_count": {
-            "type": "integer",
-            "minimum": 0.0,
-            "title": "Route Points Count",
-            "description": "Number of points in the evaluated route.",
-            "examples": [
-              5
-            ]
+          "recommendation_run_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recommendation Run Id",
+            "description": "Related recommendation run id."
           },
-          "estimated_budget": {
-            "type": "integer",
-            "minimum": 0.0,
-            "title": "Estimated Budget",
-            "description": "Estimated budget of the evaluated route in rubles.",
-            "examples": [
-              2950
-            ]
+          "route_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Route Id",
+            "description": "Related route id."
           },
-          "total_time_minutes": {
-            "type": "integer",
-            "minimum": 0.0,
-            "title": "Total Time Minutes",
-            "description": "Total estimated route time in minutes.",
-            "examples": [
-              481
-            ]
+          "feedback_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Feedback Id",
+            "description": "Related feedback id."
+          },
+          "input_context": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Input Context",
+            "description": "Request payload and context captured for the event."
+          },
+          "profile_snapshot": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profile Snapshot",
+            "description": "Expanded profile snapshot used in the decision."
+          },
+          "recommendations_snapshot": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recommendations Snapshot",
+            "description": "Saved recommendation list snapshot if available."
+          },
+          "route_snapshot": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Route Snapshot",
+            "description": "Saved route snapshot if available."
+          },
+          "explanation_snapshot": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Explanation Snapshot",
+            "description": "Explanation fragments captured for auditing."
+          },
+          "feedback_snapshot": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Feedback Snapshot",
+            "description": "Saved feedback snapshot if available."
           },
           "created_at": {
             "type": "string",
             "format": "date-time",
             "title": "Created At",
-            "description": "Feedback creation timestamp."
+            "description": "Decision log creation timestamp."
           }
         },
         "type": "object",
         "required": [
           "id",
-          "route_id",
-          "trip_request_id",
+          "event_type",
           "city_id",
-          "rating",
-          "route_points_count",
-          "estimated_budget",
-          "total_time_minutes",
           "created_at"
         ],
         "title": "DecisionLogResponse"
@@ -1766,6 +2029,14 @@
       },
       "RecommendationListResponse": {
         "properties": {
+          "recommendation_run_id": {
+            "type": "integer",
+            "title": "Recommendation Run Id",
+            "description": "Persisted recommendation run id.",
+            "examples": [
+              1
+            ]
+          },
           "trip_request_id": {
             "type": "integer",
             "title": "Trip Request Id",
@@ -1800,6 +2071,7 @@
         },
         "type": "object",
         "required": [
+          "recommendation_run_id",
           "trip_request_id",
           "city_id",
           "total_candidates",
@@ -1957,6 +2229,28 @@
             "examples": [
               true
             ]
+          },
+          "start_location": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TripLocationInput"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional explicit route start point, for example the user's hotel."
+          },
+          "end_location": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TripLocationInput"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional explicit route end point. If omitted, the builder may return to start."
           }
         },
         "type": "object",
@@ -2083,6 +2377,46 @@
               true
             ]
           },
+          "start_location": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TripLocationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Resolved route start point."
+          },
+          "end_location": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TripLocationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Resolved route end point."
+          },
+          "return_leg_distance_km": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Return Leg Distance Km",
+            "description": "Distance of the final return leg to the end point.",
+            "examples": [
+              2.4
+            ]
+          },
+          "return_leg_travel_minutes": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Return Leg Travel Minutes",
+            "description": "Travel time of the final return leg.",
+            "examples": [
+              28
+            ]
+          },
           "skipped_poi_ids": {
             "items": {
               "type": "integer"
@@ -2124,6 +2458,8 @@
           "daily_time_limit_minutes",
           "within_time_limit",
           "within_budget",
+          "return_leg_distance_km",
+          "return_leg_travel_minutes",
           "skipped_poi_ids",
           "route_points",
           "explanation_summary"
@@ -2267,6 +2603,136 @@
         ],
         "title": "RoutePointResponse"
       },
+      "TripLocationInput": {
+        "properties": {
+          "address": {
+            "type": "string",
+            "title": "Address",
+            "description": "Human-readable location address.",
+            "examples": [
+              "ул. Большая Садовая, 121"
+            ]
+          },
+          "latitude": {
+            "type": "number",
+            "title": "Latitude",
+            "description": "Location latitude.",
+            "examples": [
+              47.2269
+            ]
+          },
+          "longitude": {
+            "type": "number",
+            "title": "Longitude",
+            "description": "Location longitude.",
+            "examples": [
+              39.7139
+            ]
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name",
+            "description": "Optional location label.",
+            "examples": [
+              "Отель"
+            ]
+          },
+          "poi_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Poi Id",
+            "description": "Optional accommodation POI id.",
+            "examples": [
+              6012
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "address",
+          "latitude",
+          "longitude"
+        ],
+        "title": "TripLocationInput"
+      },
+      "TripLocationResponse": {
+        "properties": {
+          "address": {
+            "type": "string",
+            "title": "Address",
+            "description": "Human-readable location address.",
+            "examples": [
+              "ул. Большая Садовая, 121"
+            ]
+          },
+          "latitude": {
+            "type": "number",
+            "title": "Latitude",
+            "description": "Location latitude.",
+            "examples": [
+              47.2269
+            ]
+          },
+          "longitude": {
+            "type": "number",
+            "title": "Longitude",
+            "description": "Location longitude.",
+            "examples": [
+              39.7139
+            ]
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name",
+            "description": "Optional location label.",
+            "examples": [
+              "Отель"
+            ]
+          },
+          "poi_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Poi Id",
+            "description": "Optional accommodation POI id.",
+            "examples": [
+              6012
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "address",
+          "latitude",
+          "longitude"
+        ],
+        "title": "TripLocationResponse"
+      },
       "TripRequestCreate": {
         "properties": {
           "city_id": {
@@ -2277,8 +2743,31 @@
               6
             ]
           },
+          "profile_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profile Id",
+            "description": "Existing saved profile id to reuse for this trip.",
+            "examples": [
+              1
+            ]
+          },
           "profile": {
-            "$ref": "#/components/schemas/UserProfileInput"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UserProfileCreate"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Inline profile to persist and attach to the trip request."
           },
           "days_count": {
             "type": "integer",
@@ -2349,17 +2838,46 @@
                 "avoid_expensive": true
               }
             ]
+          },
+          "start_location": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TripLocationInput"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Preferred start point such as a selected hotel."
+          },
+          "end_location": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TripLocationInput"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Preferred end point. If omitted, the route may return to the start location."
           }
         },
         "type": "object",
         "required": [
-          "city_id",
-          "profile"
+          "city_id"
         ],
         "title": "TripRequestCreate"
       },
       "TripRequestResponse": {
         "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id",
+            "description": "Created trip request id.",
+            "examples": [
+              1
+            ]
+          },
           "city_id": {
             "type": "integer",
             "title": "City Id",
@@ -2368,27 +2886,29 @@
               6
             ]
           },
-          "profile": {
-            "$ref": "#/components/schemas/UserProfileInput"
-          },
-          "days_count": {
+          "profile_id": {
             "type": "integer",
-            "maximum": 14.0,
-            "minimum": 1.0,
-            "title": "Days Count",
-            "description": "Trip duration in days.",
-            "default": 1,
+            "title": "Profile Id",
+            "description": "Persisted user profile id.",
             "examples": [
               1
             ]
           },
+          "profile": {
+            "$ref": "#/components/schemas/UserProfileResponse"
+          },
+          "days_count": {
+            "type": "integer",
+            "title": "Days Count",
+            "description": "Trip duration in days.",
+            "examples": [
+              2
+            ]
+          },
           "daily_time_limit_hours": {
             "type": "integer",
-            "maximum": 16.0,
-            "minimum": 1.0,
             "title": "Daily Time Limit Hours",
             "description": "Available planning time per day.",
-            "default": 8,
             "examples": [
               8
             ]
@@ -2406,14 +2926,7 @@
               }
             ],
             "title": "Selected Interests",
-            "description": "Optional interests selected for this specific trip. If omitted, profile interests are used.",
-            "examples": [
-              [
-                "food",
-                "history",
-                "walking"
-              ]
-            ]
+            "description": "Interests selected for this trip."
           },
           "constraints": {
             "additionalProperties": {
@@ -2434,20 +2947,29 @@
             },
             "type": "object",
             "title": "Constraints",
-            "description": "Additional planning constraints for future extensions.",
-            "examples": [
-              {
-                "avoid_expensive": true
-              }
-            ]
+            "description": "Trip-level constraints snapshot."
           },
-          "id": {
-            "type": "integer",
-            "title": "Id",
-            "description": "Created trip request id.",
-            "examples": [
-              1
-            ]
+          "start_location": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TripLocationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Trip start point."
+          },
+          "end_location": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TripLocationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Trip end point."
           },
           "created_at": {
             "type": "string",
@@ -2458,15 +2980,29 @@
         },
         "type": "object",
         "required": [
-          "city_id",
-          "profile",
           "id",
+          "city_id",
+          "profile_id",
+          "profile",
+          "days_count",
+          "daily_time_limit_hours",
           "created_at"
         ],
         "title": "TripRequestResponse"
       },
-      "UserProfileInput": {
+      "UserProfileCreate": {
         "properties": {
+          "profile_name": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Profile Name",
+            "description": "Human-readable reusable profile name.",
+            "default": "Профиль путешественника",
+            "examples": [
+              "Гастро-выходные"
+            ]
+          },
           "interests": {
             "items": {
               "type": "string"
@@ -2557,6 +3093,110 @@
             "examples": [
               "detailed"
             ]
+          },
+          "goals": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Goals",
+            "description": "User goals that shape the planning strategy.",
+            "examples": [
+              [
+                "discover_local_food",
+                "minimize_transfers"
+              ]
+            ]
+          },
+          "must_have": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Must Have",
+            "description": "Trip elements the route should try to preserve.",
+            "examples": [
+              [
+                "river_view",
+                "coffee_break"
+              ]
+            ]
+          },
+          "avoid": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Avoid",
+            "description": "Trip elements the route should avoid when possible.",
+            "examples": [
+              [
+                "stairs",
+                "crowded_malls"
+              ]
+            ]
+          },
+          "compromise_strategy": {
+            "type": "string",
+            "enum": [
+              "balanced",
+              "budget_first",
+              "time_first",
+              "experience_first"
+            ],
+            "title": "Compromise Strategy",
+            "description": "What to prioritize when not all preferences fit together.",
+            "default": "balanced",
+            "examples": [
+              "balanced"
+            ]
+          },
+          "trust_level": {
+            "type": "string",
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ],
+            "title": "Trust Level",
+            "description": "How much autonomy the user delegates to the planner.",
+            "default": "medium",
+            "examples": [
+              "medium"
+            ]
+          },
+          "accessibility_needs": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Accessibility Needs",
+            "description": "Accessibility or comfort requirements to preserve.",
+            "examples": [
+              [
+                "wheelchair_access",
+                "quiet_places"
+              ]
+            ]
+          },
+          "preferred_time_windows": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "morning",
+                "afternoon",
+                "evening"
+              ]
+            },
+            "type": "array",
+            "title": "Preferred Time Windows",
+            "description": "Preferred day parts for activities.",
+            "examples": [
+              [
+                "morning",
+                "evening"
+              ]
+            ]
           }
         },
         "type": "object",
@@ -2564,7 +3204,491 @@
           "interests",
           "max_budget"
         ],
-        "title": "UserProfileInput"
+        "title": "UserProfileCreate"
+      },
+      "UserProfileResponse": {
+        "properties": {
+          "profile_name": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Profile Name",
+            "description": "Human-readable reusable profile name.",
+            "default": "Профиль путешественника",
+            "examples": [
+              "Гастро-выходные"
+            ]
+          },
+          "interests": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Interests",
+            "description": "User interests used for personalization.",
+            "examples": [
+              [
+                "culture",
+                "food",
+                "history"
+              ]
+            ]
+          },
+          "budget_level": {
+            "type": "string",
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ],
+            "title": "Budget Level",
+            "description": "Qualitative user budget level.",
+            "default": "medium",
+            "examples": [
+              "medium"
+            ]
+          },
+          "max_budget": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Max Budget",
+            "description": "Maximum available trip budget in Russian rubles.",
+            "examples": [
+              15000
+            ]
+          },
+          "pace": {
+            "type": "string",
+            "enum": [
+              "relaxed",
+              "moderate",
+              "intensive"
+            ],
+            "title": "Pace",
+            "description": "Preferred trip pace.",
+            "default": "moderate",
+            "examples": [
+              "moderate"
+            ]
+          },
+          "max_walking_distance_km": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Max Walking Distance Km",
+            "description": "Maximum preferred walking distance per day.",
+            "default": 8,
+            "examples": [
+              8
+            ]
+          },
+          "preferred_transport": {
+            "type": "string",
+            "enum": [
+              "walking",
+              "public_transport",
+              "car",
+              "mixed"
+            ],
+            "title": "Preferred Transport",
+            "description": "Preferred transport mode.",
+            "default": "walking",
+            "examples": [
+              "walking"
+            ]
+          },
+          "explanation_level": {
+            "type": "string",
+            "enum": [
+              "short",
+              "detailed"
+            ],
+            "title": "Explanation Level",
+            "description": "Preferred level of recommendation explanation.",
+            "default": "detailed",
+            "examples": [
+              "detailed"
+            ]
+          },
+          "goals": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Goals",
+            "description": "User goals that shape the planning strategy.",
+            "examples": [
+              [
+                "discover_local_food",
+                "minimize_transfers"
+              ]
+            ]
+          },
+          "must_have": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Must Have",
+            "description": "Trip elements the route should try to preserve.",
+            "examples": [
+              [
+                "river_view",
+                "coffee_break"
+              ]
+            ]
+          },
+          "avoid": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Avoid",
+            "description": "Trip elements the route should avoid when possible.",
+            "examples": [
+              [
+                "stairs",
+                "crowded_malls"
+              ]
+            ]
+          },
+          "compromise_strategy": {
+            "type": "string",
+            "enum": [
+              "balanced",
+              "budget_first",
+              "time_first",
+              "experience_first"
+            ],
+            "title": "Compromise Strategy",
+            "description": "What to prioritize when not all preferences fit together.",
+            "default": "balanced",
+            "examples": [
+              "balanced"
+            ]
+          },
+          "trust_level": {
+            "type": "string",
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ],
+            "title": "Trust Level",
+            "description": "How much autonomy the user delegates to the planner.",
+            "default": "medium",
+            "examples": [
+              "medium"
+            ]
+          },
+          "accessibility_needs": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Accessibility Needs",
+            "description": "Accessibility or comfort requirements to preserve.",
+            "examples": [
+              [
+                "wheelchair_access",
+                "quiet_places"
+              ]
+            ]
+          },
+          "preferred_time_windows": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "morning",
+                "afternoon",
+                "evening"
+              ]
+            },
+            "type": "array",
+            "title": "Preferred Time Windows",
+            "description": "Preferred day parts for activities.",
+            "examples": [
+              [
+                "morning",
+                "evening"
+              ]
+            ]
+          },
+          "id": {
+            "type": "integer",
+            "title": "Id",
+            "description": "Created profile id.",
+            "examples": [
+              1
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At",
+            "description": "Profile creation timestamp."
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At",
+            "description": "Profile update timestamp."
+          }
+        },
+        "type": "object",
+        "required": [
+          "interests",
+          "max_budget",
+          "id",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "UserProfileResponse"
+      },
+      "UserProfileUpdate": {
+        "properties": {
+          "profile_name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profile Name",
+            "description": "Updated human-readable profile name."
+          },
+          "interests": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array",
+                "minItems": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Interests",
+            "description": "Updated user interests used for personalization."
+          },
+          "budget_level": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "low",
+                  "medium",
+                  "high"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Budget Level",
+            "description": "Updated qualitative user budget level."
+          },
+          "max_budget": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Budget",
+            "description": "Updated maximum available trip budget in Russian rubles."
+          },
+          "pace": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "relaxed",
+                  "moderate",
+                  "intensive"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pace",
+            "description": "Updated preferred trip pace."
+          },
+          "max_walking_distance_km": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Walking Distance Km",
+            "description": "Updated maximum preferred walking distance per day."
+          },
+          "preferred_transport": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "walking",
+                  "public_transport",
+                  "car",
+                  "mixed"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Preferred Transport",
+            "description": "Updated preferred transport mode."
+          },
+          "explanation_level": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "short",
+                  "detailed"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Explanation Level",
+            "description": "Updated preferred level of recommendation explanation."
+          },
+          "goals": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Goals",
+            "description": "Updated user goals that shape the planning strategy."
+          },
+          "must_have": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Must Have",
+            "description": "Updated trip elements the route should try to preserve."
+          },
+          "avoid": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avoid",
+            "description": "Updated trip elements the route should avoid when possible."
+          },
+          "compromise_strategy": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "balanced",
+                  "budget_first",
+                  "time_first",
+                  "experience_first"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Compromise Strategy",
+            "description": "Updated planning compromise strategy."
+          },
+          "trust_level": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "low",
+                  "medium",
+                  "high"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trust Level",
+            "description": "Updated planner trust level."
+          },
+          "accessibility_needs": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Accessibility Needs",
+            "description": "Updated accessibility or comfort requirements."
+          },
+          "preferred_time_windows": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "morning",
+                    "afternoon",
+                    "evening"
+                  ]
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Preferred Time Windows",
+            "description": "Updated preferred day parts for activities."
+          }
+        },
+        "type": "object",
+        "title": "UserProfileUpdate"
       },
       "ValidationError": {
         "properties": {
@@ -2626,12 +3750,16 @@
       "description": "Trip requests and personalized recommendation generation."
     },
     {
+      "name": "profiles",
+      "description": "Persisted digital consciousness profiles used across trip requests."
+    },
+    {
       "name": "routes",
       "description": "Route building and route plan retrieval."
     },
     {
       "name": "feedback",
-      "description": "User route evaluation and in-memory decision log entries."
+      "description": "User route evaluation and persisted decision log entries."
     }
   ]
 }

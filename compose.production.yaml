@@ -18,14 +18,9 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    ports:
-      - "${POSTGRES_PORT:-54329}:5432"
 
   backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    image: ${BACKEND_IMAGE:-travelcontext/travelcontext-backend}:${IMAGE_TAG:-local}
+    image: ${BACKEND_IMAGE:-travelcontext/travelcontext-backend}:${IMAGE_TAG:-latest}
     container_name: travelcontext-backend
     restart: unless-stopped
     environment:
@@ -51,10 +46,7 @@ services:
       start_period: 20s
 
   frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    image: ${FRONTEND_IMAGE:-travelcontext/travelcontext-frontend}:${IMAGE_TAG:-local}
+    image: ${FRONTEND_IMAGE:-travelcontext/travelcontext-frontend}:${IMAGE_TAG:-latest}
     container_name: travelcontext-frontend
     restart: unless-stopped
     environment:
@@ -84,13 +76,15 @@ services:
     depends_on:
       frontend:
         condition: service_healthy
+      pgadmin:
+        condition: service_started
     environment:
       DOMAIN: ${DOMAIN:-localhost}
       PGADMIN_DOMAIN: ${PGADMIN_DOMAIN:-pgadmin.localhost}
       ACME_EMAIL: ${ACME_EMAIL:-}
     ports:
-      - "${HTTP_PORT:-8080}:80"
-      - "${HTTPS_PORT:-8443}:443"
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
     volumes:
       - ./deploy/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
@@ -100,8 +94,6 @@ services:
     image: dpage/pgadmin4:latest
     container_name: travelcontext-pgadmin
     restart: unless-stopped
-    profiles:
-      - tools
     environment:
       PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@example.com}
       PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-admin}

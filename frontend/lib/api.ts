@@ -77,6 +77,11 @@ export const api = {
   },
 
   // Profiles
+  async getProfiles(limit = 20): Promise<SavedProfile[]> {
+    const params = new URLSearchParams({ limit: String(limit) })
+    return fetchApi<SavedProfile[]>(`/api/profiles?${params.toString()}`)
+  },
+
   async createProfile(input: TripProfile): Promise<SavedProfile> {
     return fetchApi<SavedProfile>('/api/profiles', {
       method: 'POST',

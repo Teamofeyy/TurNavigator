@@ -5,6 +5,10 @@
 backend/.venv/
 __pycache__/
 .pytest_cache/
+.pre-commit-cache/
+.env
 .env.local
+backend/.env
 backend/.env.local
+frontend/.env
 dumps/*.dump
