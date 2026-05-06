@@ -1,4 +1,5 @@
 # ТравелКонтекст
+[![ci-cd](https://github.com/Teamofeyy/TurNavigator/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/Teamofeyy/TurNavigator/actions/workflows/ci-cd.yml)
 
 Прототип интеллектуальной системы поддержки планирования путешествий с учетом пользовательского контекста и ресурсных ограничений.
 
