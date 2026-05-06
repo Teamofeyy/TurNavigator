@@ -26,59 +26,59 @@ const iconMap = {
 
 // Light backgrounds with dark text for good contrast
 const colorMap: Record<string, { bg: string; border: string; selectedBg: string; icon: string; selectedIcon: string }> = {
-  history: { 
-    bg: 'bg-amber-50', 
+  history: {
+    bg: 'bg-amber-50',
     border: 'border-amber-200',
-    selectedBg: 'bg-amber-100 border-amber-400', 
+    selectedBg: 'bg-amber-100 border-amber-400',
     icon: 'text-amber-600',
     selectedIcon: 'text-amber-700'
   },
-  culture: { 
-    bg: 'bg-purple-50', 
+  culture: {
+    bg: 'bg-purple-50',
     border: 'border-purple-200',
-    selectedBg: 'bg-purple-100 border-purple-400', 
+    selectedBg: 'bg-purple-100 border-purple-400',
     icon: 'text-purple-600',
     selectedIcon: 'text-purple-700'
   },
-  food: { 
-    bg: 'bg-orange-50', 
+  food: {
+    bg: 'bg-orange-50',
     border: 'border-orange-200',
-    selectedBg: 'bg-orange-100 border-orange-400', 
+    selectedBg: 'bg-orange-100 border-orange-400',
     icon: 'text-orange-600',
     selectedIcon: 'text-orange-700'
   },
-  nature: { 
-    bg: 'bg-emerald-50', 
+  nature: {
+    bg: 'bg-emerald-50',
     border: 'border-emerald-200',
-    selectedBg: 'bg-emerald-100 border-emerald-400', 
+    selectedBg: 'bg-emerald-100 border-emerald-400',
     icon: 'text-emerald-600',
     selectedIcon: 'text-emerald-700'
   },
-  architecture: { 
-    bg: 'bg-slate-50', 
+  architecture: {
+    bg: 'bg-slate-50',
     border: 'border-slate-200',
-    selectedBg: 'bg-slate-100 border-slate-400', 
+    selectedBg: 'bg-slate-100 border-slate-400',
     icon: 'text-slate-600',
     selectedIcon: 'text-slate-700'
   },
-  entertainment: { 
-    bg: 'bg-pink-50', 
+  entertainment: {
+    bg: 'bg-pink-50',
     border: 'border-pink-200',
-    selectedBg: 'bg-pink-100 border-pink-400', 
+    selectedBg: 'bg-pink-100 border-pink-400',
     icon: 'text-pink-600',
     selectedIcon: 'text-pink-700'
   },
-  shopping: { 
-    bg: 'bg-cyan-50', 
+  shopping: {
+    bg: 'bg-cyan-50',
     border: 'border-cyan-200',
-    selectedBg: 'bg-cyan-100 border-cyan-400', 
+    selectedBg: 'bg-cyan-100 border-cyan-400',
     icon: 'text-cyan-600',
     selectedIcon: 'text-cyan-700'
   },
-  nightlife: { 
-    bg: 'bg-indigo-50', 
+  nightlife: {
+    bg: 'bg-indigo-50',
     border: 'border-indigo-200',
-    selectedBg: 'bg-indigo-100 border-indigo-400', 
+    selectedBg: 'bg-indigo-100 border-indigo-400',
     icon: 'text-indigo-600',
     selectedIcon: 'text-indigo-700'
   },

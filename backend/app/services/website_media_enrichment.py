@@ -134,4 +134,3 @@ def fetch_html(url: str, *, timeout_seconds: int = DEFAULT_HTML_TIMEOUT_SECONDS)
         charset = response.headers.get_content_charset() or "utf-8"
         html = response.read().decode(charset, errors="ignore")
         return html, response.geturl()
-

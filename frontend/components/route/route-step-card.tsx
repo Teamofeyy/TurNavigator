@@ -64,7 +64,7 @@ export function RouteStepCard({
                 {getCategoryLabel(point.category)}
               </Badge>
             </div>
-            
+
             <h4 className="font-semibold text-foreground line-clamp-2">
               {point.name}
             </h4>

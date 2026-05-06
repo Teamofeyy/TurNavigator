@@ -88,9 +88,10 @@ export function TravelContextApp({ initialCities }: TravelContextAppProps) {
 
   useEffect(() => {
     const cityId = state.selectedCity?.id
-    if (!cityId) {
+    if (cityId == null) {
       return
     }
+    const resolvedCityId = cityId
 
     let isCancelled = false
 
@@ -98,7 +99,7 @@ export function TravelContextApp({ initialCities }: TravelContextAppProps) {
       setHotelsLoading(true)
 
       try {
-        const hotelPois = await api.getCityPois(cityId, {
+        const hotelPois = await api.getCityPois(resolvedCityId, {
           category: 'accommodation',
           limit: 80,
         })

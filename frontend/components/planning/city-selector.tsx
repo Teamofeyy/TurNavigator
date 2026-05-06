@@ -76,8 +76,8 @@ export function CitySelector({
                 >
                   <div className={cn(
                     'flex items-center justify-center w-5 h-5 rounded border mr-2.5 transition-colors',
-                    selectedCity?.id === city.id 
-                      ? 'bg-primary border-primary' 
+                    selectedCity?.id === city.id
+                      ? 'bg-primary border-primary'
                       : 'border-border'
                   )}>
                     {selectedCity?.id === city.id && (
