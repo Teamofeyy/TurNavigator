@@ -18,20 +18,39 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.execute(
-        """
-        ALTER TABLE user_profiles ALTER COLUMN created_at SET DEFAULT now();
-        ALTER TABLE user_profiles ALTER COLUMN updated_at SET DEFAULT now();
-        ALTER TABLE trip_requests ALTER COLUMN created_at SET DEFAULT now();
-        ALTER TABLE trip_requests ALTER COLUMN updated_at SET DEFAULT now();
-        ALTER TABLE recommendation_runs ALTER COLUMN created_at SET DEFAULT now();
-        ALTER TABLE route_plans ALTER COLUMN created_at SET DEFAULT now();
-        ALTER TABLE feedback_entries ALTER COLUMN created_at SET DEFAULT now();
-        ALTER TABLE decision_logs ALTER COLUMN created_at SET DEFAULT now();
-        ALTER TABLE decision_logs ALTER COLUMN updated_at SET DEFAULT now();
-        """
-    )
+    for table_name, column_name in (
+        ("user_profiles", "created_at"),
+        ("user_profiles", "updated_at"),
+        ("trip_requests", "created_at"),
+        ("trip_requests", "updated_at"),
+        ("recommendation_runs", "created_at"),
+        ("route_plans", "created_at"),
+        ("feedback_entries", "created_at"),
+        ("decision_logs", "created_at"),
+        ("decision_logs", "updated_at"),
+    ):
+        _set_timestamp_default_if_column_exists(table_name, column_name)
 
 
 def downgrade() -> None:
     pass
+
+
+def _set_timestamp_default_if_column_exists(table_name: str, column_name: str) -> None:
+    op.execute(
+        f"""
+        DO $$
+        BEGIN
+            IF EXISTS (
+                SELECT 1
+                FROM information_schema.columns
+                WHERE table_schema = current_schema()
+                  AND table_name = '{table_name}'
+                  AND column_name = '{column_name}'
+            ) THEN
+                EXECUTE 'ALTER TABLE {table_name} ALTER COLUMN {column_name} SET DEFAULT now()';
+            END IF;
+        END
+        $$;
+        """
+    )
